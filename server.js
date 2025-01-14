@@ -16,7 +16,6 @@ app.use(express.json()); // Parses incoming JSON requests
 app.use(express.urlencoded({ extended: true })); // Parses URL-encoded data
 
 // Routes
-app.use('/api/users', userRoutes); // Mount user routes
 app.use('/api/residents', residentRoutes); // Mount resident routes
 
 // Test endpoint

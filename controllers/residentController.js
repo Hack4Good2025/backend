@@ -8,23 +8,16 @@ export const createResident = async (req, res) => {
     try {
         const { name, email, password } = req.body;
 
-        // Check if the email already exists
+        // Check if the userId (which is now unique) already exists
         const residentsRef = collection(db, 'residents');
-        const existingDoc = await getDoc(doc(residentsRef, email));
-
-        if (existingDoc.exists()) {
-            return res.status(400).json({ message: 'Email already exists' });
-        }
+        const userId = uuidv4(); // Generate a unique user ID
 
         // Hash the password
         const passwordHash = await bcrypt.hash(password, 10);
 
-        // Generate a unique user ID
-        const userId = uuidv4();
-
         // Create the resident
         const newResident = {
-            userId, // Use the generated UUID
+            userId,
             name,
             email,
             passwordHash,
@@ -34,8 +27,8 @@ export const createResident = async (req, res) => {
             updatedAt: new Date(),
         };
 
-        // Save to Firestore
-        await setDoc(doc(residentsRef, email), newResident);
+        // Save to Firestore using userId as the document ID
+        await setDoc(doc(residentsRef, userId), newResident);
 
         return res.status(201).json({ message: 'Resident created successfully', userId });
     } catch (error) {
@@ -44,11 +37,11 @@ export const createResident = async (req, res) => {
     }
 };
 
-// Get a resident by ID (using email as the unique ID)
+// Get a resident by userId
 export const getResidentById = async (req, res) => {
     try {
-        const { email } = req.params;
-        const residentRef = doc(db, 'residents', email);
+        const { userId } = req.params;
+        const residentRef = doc(db, 'residents', userId);
         const residentSnap = await getDoc(residentRef);
 
         if (!residentSnap.exists()) {
@@ -65,10 +58,10 @@ export const getResidentById = async (req, res) => {
 // Update a resident
 export const updateResident = async (req, res) => {
     try {
-        const { email } = req.params;
+        const { userId } = req.params;
         const updatedData = req.body;
 
-        const residentRef = doc(db, 'residents', email);
+        const residentRef = doc(db, 'residents', userId);
         await updateDoc(residentRef, updatedData);
 
         return res.status(200).json({ message: 'Resident updated successfully' });
@@ -81,8 +74,8 @@ export const updateResident = async (req, res) => {
 // Delete a resident
 export const deleteResident = async (req, res) => {
     try {
-        const { email } = req.params;
-        const residentRef = doc(db, 'residents', email);
+        const { userId } = req.params; // Use userId instead of email
+        const residentRef = doc(db, 'residents', userId);
         await deleteDoc(residentRef);
 
         return res.status(200).json({ message: 'Resident deleted successfully' });
@@ -92,24 +85,62 @@ export const deleteResident = async (req, res) => {
     }
 };
 
-// Request password reset (not implemented)
+// Request password reset
 export const requestPasswordReset = async (req, res) => {
-    // Logic to send a password reset email goes here
+    try {
+        const { name, userId } = req.body;
+
+        // Check if the resident exists by name and userId
+        const residentsRef = collection(db, 'residents');
+        const residentDoc = await getDoc(doc(residentsRef, userId));
+
+        if (!residentDoc.exists() || residentDoc.data().name !== name) {
+            return res.status(404).json({ message: 'Resident not found or name does not match.' });
+        }
+
+        // Save the password change request in the "password_reset" collection
+        const requestsRef = collection(db, 'password_reset');
+        const requestId = `${userId}_${Date.now()}`; // Create a unique ID for the request
+        await setDoc(doc(requestsRef, requestId), {
+            requestId,
+            userId,
+            name,
+            createdAt: new Date(),
+            status: 'pending',
+        });
+
+        return res.status(200).json({ message: 'Password change request sent to admins successfully' });
+    } catch (error) {
+        console.error('Error sending password change request:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
 };
 
 // Reset resident's password
-export const resetPassword = async (req, res) => {
+export const resetResidentPassword = async (req, res) => {
     try {
-        const { email } = req.params;
-        const { newPassword } = req.body;
+        const { userId, newPassword, requestId } = req.body;
 
+        // Hash the new password
         const passwordHash = await bcrypt.hash(newPassword, 10);
-        const residentRef = doc(db, 'residents', email);
-        await updateDoc(residentRef, { passwordHash });
 
-        return res.status(200).json({ message: 'Password reset successfully' });
+        // Update the resident's password in the residents collection
+        const residentsRef = collection(db, 'residents');
+        const residentDoc = await getDoc(doc(residentsRef, userId));
+
+        if (!residentDoc.exists()) {
+            return res.status(404).json({ message: 'Resident not found.' });
+        }
+
+        await updateDoc(doc(residentsRef, userId), { passwordHash });
+
+        // Delete the password change request from the "password_reset" collection
+        const requestsRef = collection(db, 'password_reset');
+        await deleteDoc(doc(requestsRef, requestId)); // Use the requestId passed in the body
+
+        return res.status(200).json({ message: 'Password updated successfully and request removed.' });
     } catch (error) {
-        console.error('Error resetting password:', error);
+        console.error('Error updating password:', error);
         return res.status(500).json({ message: 'Internal server error' });
     }
 };

@@ -5,27 +5,27 @@ import {
     updateResident,
     deleteResident,
     requestPasswordReset,
-    resetPassword
-} from '../controllers/residentController.js'; // Adjust the path as necessary
+    resetResidentPassword
+} from '../controllers/residentController.js';
 
 const router = express.Router();
 
 // Create a new resident
 router.post('/', createResident);
 
-// Get a resident by email (using email as an identifier)
-router.get('/:email', getResidentById);
+// Get a resident by userId
+router.get('/:userId', getResidentById);
 
 // Update a resident
-router.put('/:email', updateResident);
+router.put('/:userId', updateResident);
 
 // Delete a resident
-router.delete('/:email', deleteResident);
+router.delete('/:userId', deleteResident);
 
 // Request password reset
 router.post('/request-password-reset', requestPasswordReset);
 
 // Reset resident's password
-router.post('/:email/reset-password', resetPassword);
+router.post('/reset-password', resetResidentPassword);
 
 export default router;

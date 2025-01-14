@@ -23,7 +23,7 @@ router.post('/create', createTask);
 router.get('/viewtasks', viewTasks);
 
 // View Specific Task
-router.get('/viewtask/:id', viewTaskByID);
+router.get('/viewtask/:voucher_task_id', viewTaskByID);
 
 // View all tasks that are not claimed
 router.get('/viewtasks/notclaimed', viewTasksNotClaimed);
@@ -32,13 +32,13 @@ router.get('/viewtasks/notclaimed', viewTasksNotClaimed);
 router.get('/viewtasks/claimed', viewTasksClaimed);
 
 // Update Task
-router.put('/update/:id', updateTask);
+router.put('/update/:voucher_task_id', updateTask);
 
 // Delete Task
-router.delete('/delete/:id', deleteTask);
+router.delete('/delete/:voucher_task_id', deleteTask);
 
 // Claim Task
-router.patch('/claim/:id/:userId', claimTask);
+router.patch('/claim/:voucher_task_id/:userId', claimTask);
 
 // // Notify Admin
 // router.post('/notify/:id', notifyAdmin);

@@ -23,7 +23,6 @@ export const createResident = async (req, res) => {
         // Hash the password
         const passwordHash = await bcrypt.hash(password, 10);
 
-        // TODO: include voucherBalance
         const newResident = {
             userId,
             name,

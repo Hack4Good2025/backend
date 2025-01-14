@@ -3,9 +3,11 @@ import {
     createTask,
     viewTasks,
     viewTaskByID,
+    viewTasksNotClaimed,
+    viewTasksClaimed,
     updateTask,
-    // deleteTask,
-    // claimTask,
+    deleteTask,
+    claimTask,
     // notifyAdmin,
     // approveVoucher,
     // rejectVoucher,
@@ -23,14 +25,20 @@ router.get('/viewtasks', viewTasks);
 // View Specific Task
 router.get('/viewtask/:id', viewTaskByID);
 
+// View all tasks that are not claimed
+router.get('/viewtasks/notclaimed', viewTasksNotClaimed);
+
+// View all tasks that are claimed
+router.get('/viewtasks/claimed', viewTasksClaimed);
+
 // Update Task
 router.put('/update/:id', updateTask);
 
-// // Delete Task
-// router.delete('/delete/:id', deleteTask);
+// Delete Task
+router.delete('/delete/:id', deleteTask);
 
-// // Claim Task
-// router.patch('/claim/:id/:userId', claimTask);
+// Claim Task
+router.patch('/claim/:id/:userId', claimTask);
 
 // // Notify Admin
 // router.post('/notify/:id', notifyAdmin);

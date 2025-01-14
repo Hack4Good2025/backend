@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid'; // Import the UUID library
 import { db } from '../config/firebase.js'; // Import Firestore database instance
 import { collection, doc, setDoc, getDoc, updateDoc, deleteDoc, query, where, getDocs} from 'firebase/firestore';
 import bcrypt from 'bcrypt';
@@ -24,7 +23,7 @@ export const createResident = async (req, res) => {
         // Hash the password
         const passwordHash = await bcrypt.hash(password, 10);
 
-        // Create the resident
+        // TODO: include voucherBalance
         const newResident = {
             userId,
             name,
@@ -33,6 +32,7 @@ export const createResident = async (req, res) => {
             preOrderRequests: [],
             createdAt: new Date(),
             updatedAt: new Date(),
+            voucherBalance: 0
         };
 
         // Save to Firestore using userId as the document ID

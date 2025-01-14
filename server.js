@@ -1,7 +1,8 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import residentRoutes from './routes/residentRoutes.js'; // Import resident routes
-import { db } from './config/firebase.js'; // Import Firebase configuration if needed
+import residentRoutes from './routes/residentRoutes.js';
+import voucherRoutes from './routes/voucherRoutes.js';
+import { db } from './config/firebase.js';
 
 // Load environment variables
 dotenv.config();
@@ -15,7 +16,8 @@ app.use(express.json()); // Parses incoming JSON requests
 app.use(express.urlencoded({ extended: true })); // Parses URL-encoded data
 
 // Routes
-app.use('/api/residents', residentRoutes); // Mount resident routes
+app.use('/api/residents', residentRoutes);
+app.use('/api/vouchers', voucherRoutes)
 
 // Test endpoint
 app.get('/', (req, res) => {

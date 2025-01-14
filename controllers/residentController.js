@@ -1,12 +1,12 @@
 import { v4 as uuidv4 } from 'uuid'; // Import the UUID library
 import { db } from '../config/firebase.js'; // Import Firestore database instance
-import { collection, doc, setDoc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, getDoc, updateDoc, deleteDoc, query, where, getDocs} from 'firebase/firestore';
 import bcrypt from 'bcrypt';
 
 // Create a new resident
 export const createResident = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { name, password } = req.body;
 
         // Check if the userId (which is now unique) already exists
         const residentsRef = collection(db, 'residents');
@@ -19,7 +19,6 @@ export const createResident = async (req, res) => {
         const newResident = {
             userId,
             name,
-            email,
             passwordHash,
             transactionHistory: [],
             preOrderRequests: [],
@@ -74,7 +73,7 @@ export const updateResident = async (req, res) => {
 // Delete a resident
 export const deleteResident = async (req, res) => {
     try {
-        const { userId } = req.params; // Use userId instead of email
+        const { userId } = req.params;
         const residentRef = doc(db, 'residents', userId);
         await deleteDoc(residentRef);
 
@@ -82,6 +81,41 @@ export const deleteResident = async (req, res) => {
     } catch (error) {
         console.error('Error deleting resident:', error);
         return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+// Get UserId from Name
+export const getUserIdByName = async (req, res) => {
+    try {
+        console.log("Function called");
+        const { name } = req.query;
+        console.log(`Searching for residents with name: ${name}`);
+
+        if (!name) {
+            console.log("Name parameter is missing");
+            return res.status(400).json({ success: false, message: 'Name is required' });
+        }
+
+        const residentsRef = collection(db, 'residents');
+        const nameQuery = query(residentsRef, where("name", "==", name));
+        const querySnapshot = await getDocs(nameQuery);
+
+        if (querySnapshot.empty) {
+            console.log("No residents found with this name");
+            return res.status(404).json({ success: false, message: 'No residents found with this name' });
+        }
+
+        // Map through the results to extract name and userId
+        const results = querySnapshot.docs.map(doc => ({
+            name: doc.data().name,
+            userId: doc.data().userId,
+        }));
+
+        console.log("Residents found:", results);
+        return res.status(200).json({ success: true, residents: results });
+    } catch (error) {
+        console.error('Error fetching residents by name:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
 

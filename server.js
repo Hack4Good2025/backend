@@ -1,6 +1,5 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import userRoutes from './routes/userRoutes.js'; // Adjust the path as necessary
 import residentRoutes from './routes/residentRoutes.js'; // Import resident routes
 import { db } from './config/firebase.js'; // Import Firebase configuration if needed
 

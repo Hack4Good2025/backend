@@ -8,9 +8,18 @@ export const createResident = async (req, res) => {
     try {
         const { name, password } = req.body;
 
-        // Check if the userId (which is now unique) already exists
+        // Function to generate a memorable userId (6 characters)
+        const generateUserId = () => {
+          const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+          let userId = '';
+          for (let i = 0; i < 6; i++) {
+              userId += chars.charAt(Math.floor(Math.random() * chars.length));
+          }
+          return userId;
+      };
+
         const residentsRef = collection(db, 'residents');
-        const userId = uuidv4(); // Generate a unique user ID
+        const userId = generateUserId();
 
         // Hash the password
         const passwordHash = await bcrypt.hash(password, 10);
@@ -177,4 +186,35 @@ export const resetResidentPassword = async (req, res) => {
         console.error('Error updating password:', error);
         return res.status(500).json({ message: 'Internal server error' });
     }
+};
+
+export const loginResident = async (req, res) => {
+  const { userId, password } = req.body;
+
+  if (!userId || !password) {
+      return res.status(400).json({ message: 'User ID and password are required.' });
+  }
+
+  try {
+      const residentsRef = collection(db, 'residents');
+      const userIdQuery = query(residentsRef, where("userId", "==", userId));
+      const querySnapshot = await getDocs(userIdQuery);
+
+      if (querySnapshot.empty) {
+          return res.status(404).json({ message: 'No resident found with this user ID.' });
+      }
+
+      // Since userId is unique, we can directly access the resident data
+      const residentData = querySnapshot.docs[0].data();
+      const isMatch = await bcrypt.compare(password, residentData.passwordHash);
+
+      if (isMatch) {
+          return res.status(200).json({ message: 'Login successful', userId: residentData.userId });
+      } else {
+          return res.status(401).json({ message: 'Incorrect password.' });
+      }
+  } catch (error) {
+      console.error('Error logging in resident:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+  }
 };

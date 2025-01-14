@@ -6,7 +6,8 @@ import {
     deleteResident,
     requestPasswordReset,
     resetResidentPassword,
-    getUserIdByName
+    getUserIdByName,
+    loginResident
 } from '../controllers/residentController.js';
 
 const router = express.Router();
@@ -31,5 +32,8 @@ router.post('/reset-password', resetResidentPassword);
 
 // Get userId(s) by name
 router.get('/userIdByName', getUserIdByName);
+
+// User login
+router.post('/login', loginResident);
 
 export default router;

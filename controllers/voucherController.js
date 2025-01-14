@@ -20,7 +20,7 @@ export const createTask = async (req, res) => {
 
   try {
       const newTask = {
-          voucher_task_id: null,
+          voucherTaskId: null,
           value: intValue,
           taskName: taskName.trim(),
           userId: null,
@@ -31,7 +31,7 @@ export const createTask = async (req, res) => {
       };
 
       const taskRef = await addDoc(collection(db, 'voucher_tasks'), newTask);
-      newTask.voucher_task_id = taskRef.id;
+      newTask.voucherTaskId = taskRef.id;
 
       res.status(201).json(newTask);
   } catch (error) {
@@ -44,7 +44,7 @@ export const viewTasks = async (req, res) => {
   try {
       const snapshot = await getDocs(collection(db, 'voucher_tasks'));
       const tasks = snapshot.docs.map(doc => ({
-          voucher_task_id: doc.id,
+          voucherTaskId: doc.id,
           ...doc.data(),
       }));
       res.status(200).json(tasks);
@@ -58,7 +58,7 @@ export const viewTasksNotClaimed = async (req, res) => {
   try {
       const snapshot = await getDocs(collection(db, 'voucher_tasks'));
       const tasksNotClaimed = snapshot.docs
-          .map(doc => ({ voucher_task_id: doc.id, ...doc.data() }))
+          .map(doc => ({ voucherTaskId: doc.id, ...doc.data() }))
           .filter(task => !task.claimStatus); // Filter for tasks that are not claimed
 
       // Check if the list is empty
@@ -76,7 +76,7 @@ export const viewTasksClaimed = async (req, res) => {
   try {
       const snapshot = await getDocs(collection(db, 'voucher_tasks'));
       const tasksClaimed = snapshot.docs
-          .map(doc => ({ voucher_task_id: doc.id, ...doc.data() }))
+          .map(doc => ({ voucherTaskId: doc.id, ...doc.data() }))
           .filter(task => task.claimStatus); // Filter for tasks that are claimed
       if (tasksClaimed.length === 0) {
         return res.status(200).json({ message: 'No claimed tasks available.' });
@@ -89,17 +89,17 @@ export const viewTasksClaimed = async (req, res) => {
 
 // View a specific task by ID
 export const viewTaskByID = async (req, res) => {
-  const { voucher_task_id } = req.params;
+  const { voucherTaskId } = req.params;
 
   try {
-      const taskRef = doc(db, 'voucher_tasks', voucher_task_id);
+      const taskRef = doc(db, 'voucher_tasks', voucherTaskId);
       const taskSnapshot = await getDoc(taskRef);
 
       if (!taskSnapshot.exists()) {
           return res.status(404).json({ error: 'Task not found' });
       }
 
-      res.status(200).json({ voucher_task_id: taskSnapshot.id, ...taskSnapshot.data() });
+      res.status(200).json({ voucherTaskId: taskSnapshot.id, ...taskSnapshot.data() });
   } catch (error) {
       res.status(500).json({ error: 'Failed to retrieve task', details: error.message });
   }
@@ -107,7 +107,7 @@ export const viewTaskByID = async (req, res) => {
 
 // Update a task
 export const updateTask = async (req, res) => {
-    const { voucher_task_id } = req.params;
+    const { voucherTaskId } = req.params;
     const { value, taskName } = req.body;
 
     // Validate that at least one field is provided for update
@@ -131,7 +131,7 @@ export const updateTask = async (req, res) => {
     }
 
     try {
-        const taskRef = doc(db, 'voucher_tasks', voucher_task_id);
+        const taskRef = doc(db, 'voucher_tasks', voucherTaskId);
         const taskSnapshot = await getDoc(taskRef);
 
         // Check if task exists
@@ -155,9 +155,9 @@ export const updateTask = async (req, res) => {
 
 // Delete a task
 export const deleteTask = async (req, res) => {
-  const { voucher_task_id } = req.params;
+  const { voucherTaskId } = req.params;
   try {
-      const taskRef = doc(db, 'voucher_tasks', voucher_task_id);
+      const taskRef = doc(db, 'voucher_tasks', voucherTaskId);
       await deleteDoc(taskRef);
       res.status(200).json({ message: 'Task deleted successfully' });
   } catch (error) {
@@ -168,26 +168,44 @@ export const deleteTask = async (req, res) => {
 // Resident claim a task
 export const claimTask = async (req, res) => {
   const { voucher_task_id, userId } = req.params;
+
   try {
+      // Check if the userId exists in the residents collection
+      const residentRef = doc(db, 'residents', userId);
+      const residentSnapshot = await getDoc(residentRef);
+
+      if (!residentSnapshot.exists()) {
+          return res.status(404).json({ error: 'User ID does not exist in residents collection' });
+      }
+
+      // Check if the voucher_task_id exists in the voucher_tasks collection
       const taskRef = doc(db, 'voucher_tasks', voucher_task_id);
+      const taskSnapshot = await getDoc(taskRef);
+
+      if (!taskSnapshot.exists()) {
+          return res.status(404).json({ error: 'Task not found' });
+      }
+
+      // Proceed to claim the task
       await updateDoc(taskRef, {
           userId,
           claimStatus: true,
-        });
+      });
+
       res.status(200).json({ message: 'Task claimed successfully' });
   } catch (error) {
       res.status(500).json({ error: 'Failed to claim task', details: error.message });
   }
 };
 
-
+/*
 // Approve voucher
 export const approveVoucher = async (req, res) => {
-  const { voucher_task_id } = req.params;
+  const { voucherTaskId } = req.params;
 
   try {
       // Get the voucher task
-      const taskRef = doc(db, 'voucher_tasks', voucher_task_id);
+      const taskRef = doc(db, 'voucher_tasks', voucherTaskId);
       const taskSnapshot = await getDoc(taskRef);
 
       if (!taskSnapshot.exists()) {
@@ -236,3 +254,5 @@ export const earnVoucher = async (req, res) => {
   // Logic to earn a voucher can be added here
   res.status(200).json({ message: 'Voucher earned' });
 };
+
+*/

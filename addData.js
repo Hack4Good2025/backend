@@ -1,4 +1,4 @@
-import { db } from './firebase.js'; // Add the .js extension here
+import { db } from './firebase.js';
 import { collection, addDoc } from "firebase/firestore";
 
 async function addSampleData() {
@@ -18,5 +18,4 @@ async function addSampleData() {
   }
 }
 
-// Call the function to add the sample data
 addSampleData();

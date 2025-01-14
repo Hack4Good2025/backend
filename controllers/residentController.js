@@ -1,5 +1,6 @@
-import { db } from '../config/firebase.js';
-import { collection, doc, setDoc, getDoc, updateDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
+import { v4 as uuidv4 } from 'uuid'; // Import the UUID library
+import { db } from '../config/firebase.js'; // Import Firestore database instance
+import { collection, doc, setDoc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import bcrypt from 'bcrypt';
 
 // Create a new resident
@@ -18,9 +19,12 @@ export const createResident = async (req, res) => {
         // Hash the password
         const passwordHash = await bcrypt.hash(password, 10);
 
+        // Generate a unique user ID
+        const userId = uuidv4();
+
         // Create the resident
         const newResident = {
-            userId: email, // Use email or generate a unique ID
+            userId, // Use the generated UUID
             name,
             email,
             passwordHash,
@@ -33,7 +37,7 @@ export const createResident = async (req, res) => {
         // Save to Firestore
         await setDoc(doc(residentsRef, email), newResident);
 
-        return res.status(201).json({ message: 'Resident created successfully', userId: newResident.userId });
+        return res.status(201).json({ message: 'Resident created successfully', userId });
     } catch (error) {
         console.error('Error creating resident:', error);
         return res.status(500).json({ message: 'Internal server error' });

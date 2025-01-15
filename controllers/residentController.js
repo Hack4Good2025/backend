@@ -69,6 +69,12 @@ export const updateResident = async (req, res) => {
         const updatedData = req.body;
 
         const residentRef = doc(db, 'residents', userId);
+
+        const residentSnap = await getDoc(residentRef);
+        if (!residentSnap.exists()) {
+            return res.status(404).json({ message: 'Resident not found' });
+        }
+
         await updateDoc(residentRef, updatedData);
 
         return res.status(200).json({ message: 'Resident updated successfully' });
@@ -83,6 +89,12 @@ export const deleteResident = async (req, res) => {
     try {
         const { userId } = req.params;
         const residentRef = doc(db, 'residents', userId);
+
+        const residentSnap = await getDoc(residentRef);
+        if (!residentSnap.exists()) {
+            return res.status(404).json({ message: 'Resident not found' });
+        }
+
         await deleteDoc(residentRef);
 
         return res.status(200).json({ message: 'Resident deleted successfully' });

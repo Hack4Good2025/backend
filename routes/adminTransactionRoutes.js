@@ -20,6 +20,9 @@ router.put('/products/update/stock/:productId', updateProductStock);
 router.delete('/products/delete/:productId', deleteProduct);
 
 // Admin Routes for Inventory Management
+// TODO: integrate inventory report with pre-order list
 router.get('/inventory/report', generateInventoryReport);
+
+// TODO: automated weekly report generator
 
 export default router;

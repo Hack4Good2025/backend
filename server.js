@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import residentRoutes from './routes/residentRoutes.js';
 import voucherRoutes from './routes/voucherRoutes.js';
+// import residentTransactionRoutes from './routes/residentTransactionRoutes.js'
 import adminTransactionRoutes from './routes/adminTransactionRoutes.js'
 
 // Load environment variables
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true })); // Parses URL-encoded data
 app.use('/api/residents', residentRoutes);
 app.use('/api/vouchers', voucherRoutes);
 app.use('/api/adminTransactions', adminTransactionRoutes);
+// app.use('/api/residentTransactions', residentTransactionRoutes);
 
 // Test endpoint
 app.get('/', (req, res) => {

@@ -147,6 +147,14 @@ export const deleteProduct = async (req, res) => {
 
     try {
         const productRef = doc(db, 'products', productId);
+
+        const productSnap = await getDoc(productRef);
+
+        // Check if the product exists
+        if (!productSnap.exists()) {
+            return res.status(404).json({ message: 'Product not found.' });
+        }
+
         await deleteDoc(productRef);
 
         // Delete the corresponding inventory entry

@@ -8,10 +8,11 @@ import {
     updateTask,
     deleteTask,
     claimTask,
+    unclaimTask,
     // notifyAdmin,
-    // approveVoucher,
-    // rejectVoucher,
-    // earnVoucher,
+    approveVoucher,
+    unapproveVoucher,
+    rejectVoucher,
 } from '../controllers/voucherController.js';
 
 const router = express.Router();
@@ -40,14 +41,20 @@ router.delete('/delete/:voucherTaskId', deleteTask);
 // Claim Task
 router.patch('/claim/:voucherTaskId/:userId', claimTask);
 
+// Unclaim Task
+router.patch('/unclaim/:voucherTaskId/:userId', unclaimTask);
+
 // // Notify Admin
 // router.post('/notify/:id', notifyAdmin);
 
-// // Approve Voucher
-// router.post('/approve/:id', approveVoucher);
+// Approve Voucher
+router.patch('/approve/:voucherTaskId', approveVoucher);
 
-// // Reject Voucher
-// router.post('/reject/:id', rejectVoucher);
+// Unapprove Voucher
+router.patch('/unapprove/:voucherTaskId', unapproveVoucher);
+
+// Reject Voucher
+router.patch('/reject/:voucherTaskId', rejectVoucher);
 
 // // Earn Voucher
 // router.post('/earn/:id', earnVoucher);

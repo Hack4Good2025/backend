@@ -1,5 +1,5 @@
 import { db } from '../config/firebase.js';
-import { collection, addDoc, getDoc, getDocs, doc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { collection, addDoc, getDoc, getDocs, doc, updateDoc, deleteDoc, increment, FieldValue, query, where } from 'firebase/firestore';
 
 // Create a new voucher task
 // TODO: setup firebase storage for image uploading
@@ -167,7 +167,7 @@ export const deleteTask = async (req, res) => {
 
 // Resident claim a task
 export const claimTask = async (req, res) => {
-  const { voucher_task_id, userId } = req.params;
+  const { voucherTaskId, userId } = req.params;
 
   try {
       // Check if the userId exists in the residents collection
@@ -178,13 +178,21 @@ export const claimTask = async (req, res) => {
           return res.status(404).json({ error: 'User ID does not exist in residents collection' });
       }
 
-      // Check if the voucher_task_id exists in the voucher_tasks collection
-      const taskRef = doc(db, 'voucher_tasks', voucher_task_id);
+      // Check if the voucherTaskId exists in the voucher_tasks collection
+      const taskRef = doc(db, 'voucher_tasks', voucherTaskId);
       const taskSnapshot = await getDoc(taskRef);
 
       if (!taskSnapshot.exists()) {
           return res.status(404).json({ error: 'Task not found' });
       }
+
+      const taskData = taskSnapshot.data();
+        const { claimStatus } = taskData;
+
+        // Check if claimStatus is already true
+        if (claimStatus) {
+            return res.status(400).json({ error: 'Task is already claimed' });
+        }
 
       // Proceed to claim the task
       await updateDoc(taskRef, {
@@ -198,7 +206,49 @@ export const claimTask = async (req, res) => {
   }
 };
 
-/*
+// Resident Unclaim a task
+export const unclaimTask = async (req, res) => {
+    const { voucherTaskId, userId } = req.params;
+
+    try {
+        // Check if the userId exists in the residents collection
+        const residentRef = doc(db, 'residents', userId);
+        const residentSnapshot = await getDoc(residentRef);
+
+        if (!residentSnapshot.exists()) {
+            return res.status(404).json({ error: 'User ID does not exist in residents collection' });
+        }
+
+        // Check if the voucherTaskId exists in the voucher_tasks collection
+        const taskRef = doc(db, 'voucher_tasks', voucherTaskId);
+        const taskSnapshot = await getDoc(taskRef);
+
+        if (!taskSnapshot.exists()) {
+            return res.status(404).json({ error: 'Task not found' });
+        }
+
+        const taskData = taskSnapshot.data();
+        const { claimStatus } = taskData;
+
+        // Check if claimStatus is true
+        if (!claimStatus) {
+            return res.status(400).json({ error: 'Task is not claimed; cannot unclaim' });
+        }
+
+        // Proceed to unclaim the task
+        await updateDoc(taskRef, {
+            userId: null,  // Clear the userId to indicate it's unclaimed
+            claimStatus: false,
+        });
+
+        res.status(200).json({ message: 'Task unclaimed successfully' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to unclaim task', details: error.message });
+    }
+};
+
+// TODO: Notify Admin (similar to request password change?)
+
 // Approve voucher
 export const approveVoucher = async (req, res) => {
   const { voucherTaskId } = req.params;
@@ -213,12 +263,17 @@ export const approveVoucher = async (req, res) => {
       }
 
       const taskData = taskSnapshot.data();
-      const { userId, value } = taskData;
+      const { userId, value, distributedStatus } = taskData;
+
+      // Check if distributedStatus is false
+      if (distributedStatus) {
+        return res.status(400).json({ error: 'Voucher is approved; cannot approve again' });
+      }
 
       // Update the resident's voucher balance
       const residentRef = doc(db, 'residents', userId);
       await updateDoc(residentRef, {
-          voucherBalance: increment(value), // Increment the voucher balance by the value of the voucher
+          voucherBalance: increment(value),
       });
 
       // Update distributed status of the voucher task
@@ -232,27 +287,60 @@ export const approveVoucher = async (req, res) => {
   }
 };
 
+// Revert the approve
+export const unapproveVoucher = async (req, res) => {
+    const { voucherTaskId } = req.params;
+
+    try {
+        // Get the voucher task
+        const taskRef = doc(db, 'voucher_tasks', voucherTaskId);
+        const taskSnapshot = await getDoc(taskRef);
+
+        if (!taskSnapshot.exists()) {
+            return res.status(404).json({ error: 'Voucher task not found' });
+        }
+
+        const taskData = taskSnapshot.data();
+        const { userId, value, distributedStatus } = taskData;
+
+        if (!userId || value === undefined) {
+            return res.status(400).json({ error: 'Invalid task data' });
+        }
+
+        // Check if distributedStatus is true
+        if (!distributedStatus) {
+          return res.status(400).json({ error: 'Voucher is not approved; cannot unapprove' });
+        }
+
+        // Update the resident's voucher balance
+        const residentRef = doc(db, 'residents', userId);
+        await updateDoc(residentRef, {
+            voucherBalance: increment(-value),
+        });
+
+        // Update distributed status of the voucher task
+        await updateDoc(taskRef, {
+            distributedStatus: false,
+        });
+
+        res.status(200).json({ message: 'Voucher unapproved and balance decremented' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to unapprove voucher', details: error.message });
+    }
+};
+
 // Reject voucher
 export const rejectVoucher = async (req, res) => {
-  const { id } = req.params;
+  const { voucherTaskId } = req.params;
 
   try {
-      const taskRef = doc(db, 'voucher_tasks', id);
+      const taskRef = doc(db, 'voucher_tasks', voucherTaskId);
       await updateDoc(taskRef, {
-          userId: null, // Revert userId to null
-          distributedStatus: false, // Optional: Set distributedStatus back to false
+          userId: null,
+          distributedStatus: false,
       });
       res.status(200).json({ message: 'Voucher rejected and user ID reverted' });
   } catch (error) {
       res.status(500).json({ error: 'Failed to reject voucher', details: error.message });
   }
 };
-
-// Earn voucher (mock implementation)
-export const earnVoucher = async (req, res) => {
-  const { id } = req.params;
-  // Logic to earn a voucher can be added here
-  res.status(200).json({ message: 'Voucher earned' });
-};
-
-*/

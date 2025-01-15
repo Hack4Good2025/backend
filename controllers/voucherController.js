@@ -158,6 +158,14 @@ export const deleteTask = async (req, res) => {
   const { voucherTaskId } = req.params;
   try {
       const taskRef = doc(db, 'voucher_tasks', voucherTaskId);
+
+      const taskSnapshot = await getDoc(taskRef);
+
+      // Check if task exists
+      if (!taskSnapshot.exists()) {
+          return res.status(404).json({ error: 'Task not found' });
+      }
+
       await deleteDoc(taskRef);
       res.status(200).json({ message: 'Task deleted successfully' });
   } catch (error) {
@@ -335,6 +343,13 @@ export const rejectVoucher = async (req, res) => {
 
   try {
       const taskRef = doc(db, 'voucher_tasks', voucherTaskId);
+
+      const taskSnapshot = await getDoc(taskRef);
+
+      if (!taskSnapshot.exists()) {
+          return res.status(404).json({ error: 'Voucher task not found' });
+      }
+
       await updateDoc(taskRef, {
           userId: null,
           distributedStatus: false,

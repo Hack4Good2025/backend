@@ -44,6 +44,28 @@ export const createResident = async (req, res) => {
     }
 };
 
+// Get all residents
+export const getAllResidents = async (req, res) => {
+  try {
+      const residentsRef = collection(db, 'residents');
+      const residentsSnap = await getDocs(residentsRef);
+
+      if (residentsSnap.empty) {
+          return res.status(404).json({ message: 'No residents found' });
+      }
+
+      const residents = [];
+      residentsSnap.forEach(doc => {
+          residents.push({ id: doc.id, ...doc.data() });
+      });
+
+      return res.status(200).json(residents);
+  } catch (error) {
+      console.error('Error fetching residents:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 // Get a resident by userId
 export const getResidentById = async (req, res) => {
     try {

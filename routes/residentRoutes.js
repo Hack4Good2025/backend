@@ -2,6 +2,7 @@ import express from 'express';
 import {
     createResident,
     getResidentById,
+    getAllResidents,
     updateResident,
     deleteResident,
     requestPasswordReset,
@@ -14,6 +15,9 @@ const router = express.Router();
 
 // Create a new resident
 router.post('/create', createResident);
+
+// Get all residents
+router.get('/getall', getAllResidents);
 
 // Get a resident by userId
 router.get('/get/:userId', getResidentById);

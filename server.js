@@ -2,7 +2,8 @@ import express from 'express';
 import dotenv from 'dotenv';
 import residentRoutes from './routes/residentRoutes.js';
 import voucherRoutes from './routes/voucherRoutes.js';
-import { db } from './config/firebase.js';
+// import residentTransactionRoutes from './routes/residentTransactionRoutes.js'
+import adminTransactionRoutes from './routes/adminTransactionRoutes.js'
 
 // Load environment variables
 dotenv.config();
@@ -17,7 +18,9 @@ app.use(express.urlencoded({ extended: true })); // Parses URL-encoded data
 
 // Routes
 app.use('/api/residents', residentRoutes);
-app.use('/api/vouchers', voucherRoutes)
+app.use('/api/vouchers', voucherRoutes);
+app.use('/api/adminTransactions', adminTransactionRoutes);
+// app.use('/api/residentTransactions', residentTransactionRoutes);
 
 // Test endpoint
 app.get('/', (req, res) => {

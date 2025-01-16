@@ -89,7 +89,7 @@ export const viewTasksClaimed = async (req, res) => {
 
 // View a specific task by ID
 export const viewTaskByID = async (req, res) => {
-  const { voucherTaskId } = req.params;
+  const { voucherTaskId } = req.body;
 
   try {
       const taskRef = doc(db, 'voucher_tasks', voucherTaskId);
@@ -107,8 +107,7 @@ export const viewTaskByID = async (req, res) => {
 
 // Update a task
 export const updateTask = async (req, res) => {
-    const { voucherTaskId } = req.params;
-    const { value, taskName } = req.body;
+    const { voucherTaskId, value, taskName } = req.body;
 
     // Validate that at least one field is provided for update
     if (value === undefined && taskName === undefined) {
@@ -155,7 +154,7 @@ export const updateTask = async (req, res) => {
 
 // Delete a task
 export const deleteTask = async (req, res) => {
-  const { voucherTaskId } = req.params;
+  const { voucherTaskId } = req.body;
   try {
       const taskRef = doc(db, 'voucher_tasks', voucherTaskId);
 
@@ -175,7 +174,7 @@ export const deleteTask = async (req, res) => {
 
 // Resident claim a task
 export const claimTask = async (req, res) => {
-  const { voucherTaskId, userId } = req.params;
+  const { voucherTaskId, userId } = req.body;
 
   try {
       // Check if the userId exists in the residents collection
@@ -216,7 +215,7 @@ export const claimTask = async (req, res) => {
 
 // Resident Unclaim a task
 export const unclaimTask = async (req, res) => {
-    const { voucherTaskId, userId } = req.params;
+    const { voucherTaskId, userId } = req.body;
 
     try {
         // Check if the userId exists in the residents collection
@@ -259,7 +258,7 @@ export const unclaimTask = async (req, res) => {
 
 // Approve voucher
 export const approveVoucher = async (req, res) => {
-  const { voucherTaskId } = req.params;
+  const { voucherTaskId } = req.body;
 
   try {
       // Get the voucher task
@@ -297,7 +296,7 @@ export const approveVoucher = async (req, res) => {
 
 // Revert the approve
 export const unapproveVoucher = async (req, res) => {
-    const { voucherTaskId } = req.params;
+    const { voucherTaskId } = req.body;
 
     try {
         // Get the voucher task
@@ -339,7 +338,7 @@ export const unapproveVoucher = async (req, res) => {
 
 // Reject voucher
 export const rejectVoucher = async (req, res) => {
-  const { voucherTaskId } = req.params;
+  const { voucherTaskId } = req.body;
 
   try {
       const taskRef = doc(db, 'voucher_tasks', voucherTaskId);

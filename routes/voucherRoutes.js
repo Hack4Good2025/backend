@@ -20,22 +20,22 @@ const router = express.Router();
 // Task Management
 router.post('/create', createTask);
 router.get('/viewtasks', viewTasks);
-router.get('/viewtask/:voucherTaskId', viewTaskByID);
+router.get('/viewtask/id', viewTaskByID);
 router.get('/viewtasks/notclaimed', viewTasksNotClaimed);
 router.get('/viewtasks/claimed', viewTasksClaimed);
-router.put('/update/:voucherTaskId', updateTask);
-router.delete('/delete/:voucherTaskId', deleteTask);
+router.put('/update', updateTask);
+router.delete('/delete', deleteTask);
 
 // Claim / Unclaim Task
-router.patch('/claim/:voucherTaskId/:userId', claimTask);
-router.patch('/unclaim/:voucherTaskId/:userId', unclaimTask);
+router.patch('/claim', claimTask);
+router.patch('/unclaim', unclaimTask);
 
 // // Notify Admin
 // router.post('/notify/:id', notifyAdmin);
 
 // Approve / Unapprove / Reject Task
-router.patch('/approve/:voucherTaskId', approveVoucher);
-router.patch('/unapprove/:voucherTaskId', unapproveVoucher);
-router.patch('/reject/:voucherTaskId', rejectVoucher);
+router.patch('/approve', approveVoucher);
+router.patch('/unapprove', unapproveVoucher);
+router.patch('/reject', rejectVoucher);
 
 export default router;

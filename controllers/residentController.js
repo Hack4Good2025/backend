@@ -116,6 +116,34 @@ export const updateResident = async (req, res) => {
     }
 };
 
+// Update Resident Voucher Balance
+export const updateResidentVoucherBalance = async (req, res) => {
+  try {
+      const { userId, newVoucherBalance } = req.body;
+
+      // Validate that newVoucherBalance is a float (can be 0 or positive)
+      if (typeof newVoucherBalance !== 'number' || newVoucherBalance < 0) {
+          return res.status(400).json({ message: 'New voucher balance must be a float and cannot be negative.' });
+      }
+
+      const residentRef = doc(db, 'residents', userId);
+      const residentSnap = await getDoc(residentRef);
+
+      if (!residentSnap.exists()) {
+          return res.status(404).json({ message: 'Resident not found' });
+      }
+
+      // Update the resident's voucher balance
+      await updateDoc(residentRef, { voucherBalance: newVoucherBalance });
+
+      return res.status(200).json({ message: 'Voucher balance updated successfully' });
+  } catch (error) {
+      console.error('Error updating voucher balance:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
 // Delete a resident
 export const deleteResident = async (req, res) => {
     try {

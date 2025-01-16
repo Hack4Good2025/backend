@@ -108,7 +108,10 @@ export const updateProductDetails = async (req, res) => {
 export const updateProductStock = async (req, res) => {
   const { productId, stock, name, description, price, imageUrl } = req.body;
 
-
+  // Validate that productId is provided
+  if (!productId) {
+      return res.status(400).json({ message: 'Product ID is required.' });
+  }
    // Validate the stock value
   if (stock < 0) {
       return res.status(400).json({ message: 'Stock value cannot be negative.' });
@@ -132,9 +135,53 @@ export const updateProductStock = async (req, res) => {
           stock,
           updatedAt: Timestamp.now(),
       });
-      return res.status(200).json({ message: 'Product updated successfully' });
+      return res.status(200).json({
+        message: 'Product updated successfully',
+        updatedStock: stock
+    });
   } catch (error) {
       console.error('Error updating product: ', error);
+      return res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+export const addProductStock = async (req, res) => {
+  const { productId, increment } = req.body;
+
+  // Validate that productId is provided
+  if (!productId) {
+      return res.status(400).json({ message: 'Product ID is required.' });
+  }
+
+  // Validate that increment is a positive integer
+  if (!Number.isInteger(increment) || increment <= 0) {
+      return res.status(400).json({ message: 'Increment value must be a positive integer.' });
+  }
+
+  try {
+      const productRef = doc(db, 'products', productId);
+      const productSnap = await getDoc(productRef);
+
+      // Check if the product exists
+      if (!productSnap.exists()) {
+          return res.status(404).json({ message: 'Product not found.' });
+      }
+
+      const productData = productSnap.data();
+      const newStock = productData.stock + increment; // Increment the stock
+
+      await updateDoc(productRef, {
+          stock: newStock,
+          updatedAt: Timestamp.now(),
+      });
+
+      // Return the updated stock level in the response
+      return res.status(200).json({
+          message: 'Stock updated successfully',
+          updatedStock: newStock
+      });
+  } catch (error) {
+      console.error('Error adding stock: ', error);
       return res.status(500).json({ message: 'Internal Server Error' });
   }
 };

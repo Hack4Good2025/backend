@@ -6,8 +6,8 @@ export const purchaseProduct = async (req, res) => {
     const { userId, productId, quantity } = req.body;
 
     // Validate quantity
-    if (quantity <= 0) {
-      return res.status(400).json({ message: 'Quantity must be a positive number' });
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      return res.status(400).json({ message: 'Quantity must be a positive integer' });
     }
 
     try {
@@ -19,6 +19,26 @@ export const purchaseProduct = async (req, res) => {
         }
 
         const productData = productSnap.data();
+
+        // Check stock availability (and suggest Pre-Order)
+        /*
+        FrontEnd handling:
+        if (response.data.suggestPreOrder) {
+            // Redirect to pre-order page or show a message prompting the user to pre-order
+            alert(response.data.message); // or use a modal
+            // Redirect to pre-order form
+            history.push('/preorder');
+        } else {
+            // Handle successful purchase
+        }
+        */
+        if (productData.stock <= 0) {
+          return res.status(400).json({
+              message: 'Product is out of stock. Consider pre-ordering.',
+              suggestPreOrder: true
+          });
+        }
+
         if (productData.stock < quantity) {
             return res.status(400).json({ message: 'Insufficient stock available' });
         }
@@ -122,8 +142,8 @@ export const updatePurchaseQuantity = async (req, res) => {
     const { transactionId, newQuantity } = req.body;
 
     // Validate quantity
-    if (newQuantity <= 0) {
-      return res.status(400).json({ message: 'Quantity must be a positive number' });
+    if (!Number.isInteger(newQuantity) || newQuantity <= 0) {
+      return res.status(400).json({ message: 'Quantity must be a positive integer' });
     }
 
     try {
@@ -222,7 +242,6 @@ export const preOrderProducts = async (req, res) => {
   const { userId, productId, quantity } = req.body;
 
   try {
-      // Here you can implement logic to check if the product exists
       const productRef = doc(db, 'products', productId);
       const productSnap = await getDoc(productRef);
 

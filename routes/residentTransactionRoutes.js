@@ -20,6 +20,6 @@ router.put('/transactions/update', updatePurchaseQuantity);
 router.delete('/transactions/cancel', cancelPurchaseProduct);
 
 // Resident Pre-Order Routes
-// router.post('/preorder', preOrderProducts);
+router.post('/preorder', preOrderProducts);
 
 export default router;

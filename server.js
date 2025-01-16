@@ -1,9 +1,10 @@
 import express from 'express';
 import dotenv from 'dotenv';
+import cors from 'cors';
 import residentRoutes from './routes/residentRoutes.js';
 import voucherRoutes from './routes/voucherRoutes.js';
-import residentTransactionRoutes from './routes/residentTransactionRoutes.js'
-import adminTransactionRoutes from './routes/adminTransactionRoutes.js'
+import residentTransactionRoutes from './routes/residentTransactionRoutes.js';
+import adminTransactionRoutes from './routes/adminTransactionRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -13,6 +14,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
+app.use(cors()); // Enable CORS for all routes
 app.use(express.json()); // Parses incoming JSON requests
 app.use(express.urlencoded({ extended: true })); // Parses URL-encoded data
 

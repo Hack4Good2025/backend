@@ -5,6 +5,7 @@ import {
     viewAllProducts,
     updateProductDetails,
     updateProductStock,
+    addProductStock,
     deleteProduct,
     generateInventoryReport,
 } from '../controllers/adminTransactionController.js';
@@ -17,6 +18,7 @@ router.get('/products/view/id', viewProduct);
 router.get('/products/view/all', viewAllProducts);
 router.put('/products/update/details', updateProductDetails);
 router.put('/products/update/stock', updateProductStock);
+router.put('/products/update/addstock', addProductStock);
 router.delete('/products/delete', deleteProduct);
 
 // Admin Routes for Inventory Management

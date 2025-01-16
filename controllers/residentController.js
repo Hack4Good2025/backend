@@ -1,4 +1,4 @@
-import { db } from '../config/firebase.js'; // Import Firestore database instance
+import { db } from '../config/firebase.js';
 import { collection, doc, setDoc, getDoc, updateDoc, deleteDoc, query, where, getDocs} from 'firebase/firestore';
 import bcrypt from 'bcrypt';
 

@@ -4,6 +4,7 @@ import {
     getResidentById,
     getAllResidents,
     updateResident,
+    updateResidentVoucherBalance,
     deleteResident,
     requestPasswordReset,
     resetResidentPassword,
@@ -18,7 +19,8 @@ router.post('/create', createResident);
 router.get('/get/all', getAllResidents);
 router.get('/get/id', getResidentById);
 router.get('/get/name', getUserIdFromName);
-router.put('/update', updateResident);
+router.put('/update/details', updateResident);
+router.put('/update/balance', updateResidentVoucherBalance);
 router.delete('/delete', deleteResident);
 router.post('/request-password-reset', requestPasswordReset);
 router.post('/reset-password', resetResidentPassword);

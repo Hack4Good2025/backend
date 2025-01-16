@@ -3,77 +3,88 @@ import { collection, doc, setDoc, getDoc, updateDoc, deleteDoc, getDocs, Timesta
 
 // Purchase a product
 export const purchaseProduct = async (req, res) => {
-    const { userId, productId, quantity } = req.body;
+  const { userId, productId, quantity } = req.body;
 
-    // Validate quantity
-    if (!Number.isInteger(quantity) || quantity <= 0) {
+  // Validate quantity
+  if (!Number.isInteger(quantity) || quantity <= 0) {
       return res.status(400).json({ message: 'Quantity must be a positive integer' });
-    }
+  }
 
-    try {
-        const productRef = doc(db, 'products', productId);
-        const productSnap = await getDoc(productRef);
+  try {
+      const productRef = doc(db, 'products', productId);
+      const productSnap = await getDoc(productRef);
 
-        if (!productSnap.exists()) {
-            return res.status(404).json({ message: 'Product not found' });
-        }
+      if (!productSnap.exists()) {
+          return res.status(404).json({ message: 'Product not found' });
+      }
 
-        const productData = productSnap.data();
+      const productData = productSnap.data();
 
-        // Check stock availability (and suggest Pre-Order)
-        /*
-        FrontEnd handling:
-        if (response.data.suggestPreOrder) {
-            // Redirect to pre-order page or show a message prompting the user to pre-order
-            alert(response.data.message); // or use a modal
-            // Redirect to pre-order form
-            history.push('/preorder');
-        } else {
-            // Handle successful purchase
-        }
-        */
-        if (productData.stock <= 0) {
+      // Check stock availability (and suggest Pre-Order)
+      if (productData.stock <= 0) {
           return res.status(400).json({
               message: 'Product is out of stock. Consider pre-ordering.',
               suggestPreOrder: true
           });
-        }
+      }
 
-        if (productData.stock < quantity) {
-            return res.status(400).json({ message: 'Insufficient stock available' });
-        }
+      if (productData.stock < quantity) {
+          return res.status(400).json({ message: 'Insufficient stock available' });
+      }
 
-        // Create transaction record
-        const transactionRef = doc(collection(db, 'transactions'));
-        const transactionData = {
-            userId,
-            productId,
-            quantity,
-            createdAt: Timestamp.now(),
-            updatedAt: Timestamp.now(),
-        };
+      // Fetch resident's voucher balance
+      const residentRef = doc(db, 'residents', userId);
+      const residentSnap = await getDoc(residentRef);
 
-        await setDoc(transactionRef, transactionData);
+      if (!residentSnap.exists()) {
+          return res.status(404).json({ message: 'Resident not found' });
+      }
 
-        // Update the resident's transaction history
-        const residentRef = doc(db, 'residents', userId);
-        await updateDoc(residentRef, {
-            transactionHistory: [...(await getDoc(residentRef)).data().transactionHistory, transactionRef.id],
-            updatedAt: Timestamp.now(),
-        });
+      const residentData = residentSnap.data();
+      const totalCost = productData.price * quantity;
 
+      // Check voucher balance
+      if (residentData.voucherBalance < totalCost) {
+          return res.status(400).json({ message: 'Insufficient voucher balance' });
+      }
 
-        // Update product stock
-        await updateDoc(productRef, {
-            stock: productData.stock - quantity,
-            updatedAt: Timestamp.now(),
-        });
+      // Deduct the total cost from voucher balance
+      const updatedVoucherBalance = residentData.voucherBalance - totalCost;
 
-        return res.status(201).json({ message: 'Product purchased successfully', transactionId: transactionRef.id });
-    } catch (error) {
-        console.error('Error purchasing product: ', error);
-        return res.status(500).json({ message: 'Internal Server Error' });
-    }
+      // Create transaction record
+      const transactionRef = doc(collection(db, 'transactions'));
+      const transactionData = {
+          userId,
+          productId,
+          quantity,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+      };
+
+      await setDoc(transactionRef, transactionData);
+
+      // Update the resident's transaction history and voucher balance
+      await updateDoc(residentRef, {
+          transactionHistory: [...(await getDoc(residentRef)).data().transactionHistory, transactionRef.id],
+          voucherBalance: updatedVoucherBalance, // Update the voucher balance
+          updatedAt: Timestamp.now(),
+      });
+
+      // Update product stock
+      await updateDoc(productRef, {
+          stock: productData.stock - quantity,
+          updatedAt: Timestamp.now(),
+      });
+
+      return res.status(201).json({
+          message: 'Product purchased successfully',
+          transactionId: transactionRef.id,
+          remainingVoucherBalance: updatedVoucherBalance // Return the remaining voucher balance
+      });
+  } catch (error) {
+      console.error('Error purchasing product: ', error);
+      return res.status(500).json({ message: 'Internal Server Error' });
+  }
 };
 
 // View resident's transaction history

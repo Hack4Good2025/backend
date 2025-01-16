@@ -69,7 +69,7 @@ export const getAllResidents = async (req, res) => {
 // Get a resident by userId
 export const getResidentById = async (req, res) => {
     try {
-        const { userId } = req.params;
+        const { userId } = req.body;
         const residentRef = doc(db, 'residents', userId);
         const residentSnap = await getDoc(residentRef);
 
@@ -84,18 +84,28 @@ export const getResidentById = async (req, res) => {
     }
 };
 
-// Update a resident
+// Update Resident
 export const updateResident = async (req, res) => {
     try {
-        const { userId } = req.params;
-        const updatedData = req.body;
+        const { userId, name, password } = req.body;
+
+        // Validate that name and password are provided
+        if (name === null || name === undefined || password === null || password === undefined) {
+            return res.status(400).json({ message: 'Name and password cannot be null.' });
+        }
 
         const residentRef = doc(db, 'residents', userId);
-
         const residentSnap = await getDoc(residentRef);
+
         if (!residentSnap.exists()) {
             return res.status(404).json({ message: 'Resident not found' });
         }
+
+        // Prepare the data to update
+        const updatedData = {
+            name,
+            passwordHash: await bcrypt.hash(password, 10) // Hash the new password
+        };
 
         await updateDoc(residentRef, updatedData);
 
@@ -109,7 +119,7 @@ export const updateResident = async (req, res) => {
 // Delete a resident
 export const deleteResident = async (req, res) => {
     try {
-        const { userId } = req.params;
+        const { userId } = req.body;
         const residentRef = doc(db, 'residents', userId);
 
         const residentSnap = await getDoc(residentRef);
@@ -127,10 +137,10 @@ export const deleteResident = async (req, res) => {
 };
 
 // Get UserId from Name
-export const getUserIdByName = async (req, res) => {
+export const getUserIdFromName = async (req, res) => {
     try {
         console.log("Function called");
-        const { name } = req.query;
+        const { name } = req.body;
         console.log(`Searching for residents with name: ${name}`);
 
         if (!name) {
@@ -221,33 +231,38 @@ export const resetResidentPassword = async (req, res) => {
     }
 };
 
-export const loginResident = async (req, res) => {
-  const { userId, password } = req.body;
+export const loginUser = async (req, res) => {
+    const { userId, password } = req.body;
 
-  if (!userId || !password) {
-      return res.status(400).json({ message: 'User ID and password are required.' });
-  }
+    if (!userId || !password) {
+        return res.status(400).json({ message: 'User ID and password are required.' });
+    }
 
-  try {
-      const residentsRef = collection(db, 'residents');
-      const userIdQuery = query(residentsRef, where("userId", "==", userId));
-      const querySnapshot = await getDocs(userIdQuery);
+    try {
+        // Check if the user is admin
+        if (userId === 'admin' && password === 'admin') {
+            return res.status(200).json({ message: 'Login successful', isAdmin: true, userId: 'admin' });
+        }
 
-      if (querySnapshot.empty) {
-          return res.status(404).json({ message: 'No resident found with this user ID.' });
-      }
+        const residentsRef = collection(db, 'residents');
+        const userIdQuery = query(residentsRef, where("userId", "==", userId));
+        const querySnapshot = await getDocs(userIdQuery);
 
-      // Since userId is unique, we can directly access the resident data
-      const residentData = querySnapshot.docs[0].data();
-      const isMatch = await bcrypt.compare(password, residentData.passwordHash);
+        if (querySnapshot.empty) {
+            return res.status(404).json({ message: 'No resident found with this user ID.' });
+        }
 
-      if (isMatch) {
-          return res.status(200).json({ message: 'Login successful', userId: residentData.userId });
-      } else {
-          return res.status(401).json({ message: 'Incorrect password.' });
-      }
-  } catch (error) {
-      console.error('Error logging in resident:', error);
-      return res.status(500).json({ message: 'Internal server error' });
-  }
+        // Since userId is unique, we can directly access the resident data
+        const residentData = querySnapshot.docs[0].data();
+        const isMatch = await bcrypt.compare(password, residentData.passwordHash);
+
+        if (isMatch) {
+            return res.status(200).json({ message: 'Login successful', isAdmin: false, userId: residentData.userId });
+        } else {
+            return res.status(401).json({ message: 'Incorrect password.' });
+        }
+    } catch (error) {
+        console.error('Error logging in resident:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
 };

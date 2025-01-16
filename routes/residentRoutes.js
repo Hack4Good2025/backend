@@ -7,37 +7,23 @@ import {
     deleteResident,
     requestPasswordReset,
     resetResidentPassword,
-    getUserIdByName,
-    loginResident
+    getUserIdFromName,
+    loginUser
 } from '../controllers/residentController.js';
 
 const router = express.Router();
 
-// Create a new resident
+// Resident Routes
 router.post('/create', createResident);
-
-// Get all residents
-router.get('/getall', getAllResidents);
-
-// Get a resident by userId
-router.get('/get/:userId', getResidentById);
-
-// Update a resident
-router.put('/update/:userId', updateResident);
-
-// Delete a resident
-router.delete('/delete/:userId', deleteResident);
-
-// Request password reset
+router.get('/get/all', getAllResidents);
+router.get('/get/id', getResidentById);
+router.get('/get/name', getUserIdFromName);
+router.put('/update', updateResident);
+router.delete('/delete', deleteResident);
 router.post('/request-password-reset', requestPasswordReset);
-
-// Reset resident's password
 router.post('/reset-password', resetResidentPassword);
 
-// Get userId(s) by name
-router.get('/userIdByName', getUserIdByName);
-
 // User login
-router.post('/login', loginResident);
+router.post('/login', loginUser);
 
 export default router;

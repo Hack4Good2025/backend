@@ -49,7 +49,7 @@ export const viewAllProducts = async (req, res) => {
 
 // View a product by ID
 export const viewProduct = async (req, res) => {
-    const { productId } = req.params;
+    const { productId } = req.body;
 
     try {
         const productRef = doc(db, 'products', productId);
@@ -68,8 +68,7 @@ export const viewProduct = async (req, res) => {
 
 // Update a product details (not stock)
 export const updateProductDetails = async (req, res) => {
-  const { productId } = req.params;
-  const { name, description, price, imageUrl, stock } = req.body;
+  const { productId, name, description, price, imageUrl, stock } = req.body;
 
   // Alert the user if stock is included in the request body
   if (stock !== undefined) {
@@ -107,8 +106,7 @@ export const updateProductDetails = async (req, res) => {
 
 // Update product stock
 export const updateProductStock = async (req, res) => {
-  const { productId } = req.params;
-  const { stock, name, description, price, imageUrl } = req.body;
+  const { productId, stock, name, description, price, imageUrl } = req.body;
 
 
    // Validate the stock value
@@ -143,7 +141,7 @@ export const updateProductStock = async (req, res) => {
 
 // Delete a product
 export const deleteProduct = async (req, res) => {
-    const { productId } = req.params;
+    const { productId } = req.body;
 
     try {
         const productRef = doc(db, 'products', productId);

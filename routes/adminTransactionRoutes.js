@@ -13,11 +13,11 @@ const router = express.Router();
 
 // Admin Routes for Product Management
 router.post('/products/create', createProduct);
-router.get('/products/view/:productId', viewProduct);
-router.get('/products/viewall', viewAllProducts);
-router.put('/products/update/details/:productId', updateProductDetails);
-router.put('/products/update/stock/:productId', updateProductStock);
-router.delete('/products/delete/:productId', deleteProduct);
+router.get('/products/view/id', viewProduct);
+router.get('/products/view/all', viewAllProducts);
+router.put('/products/update/details', updateProductDetails);
+router.put('/products/update/stock', updateProductStock);
+router.delete('/products/delete', deleteProduct);
 
 // Admin Routes for Inventory Management
 // TODO: integrate inventory report with pre-order list

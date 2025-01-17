@@ -94,6 +94,41 @@ export const getResidentById = async (req, res) => {
     }
 };
 
+// Get UserId from Name
+export const getUserIdFromName = async (req, res) => {
+  try {
+      console.log("Function called");
+      const { name } = req.body;
+      console.log(`Searching for residents with name: ${name}`);
+
+      if (!name) {
+          console.log("Name parameter is missing");
+          return res.status(400).json({ success: false, message: 'Name is required' });
+      }
+
+      const residentsRef = collection(db, 'residents');
+      const nameQuery = query(residentsRef, where("name", "==", name));
+      const querySnapshot = await getDocs(nameQuery);
+
+      if (querySnapshot.empty) {
+          console.log("No residents found with this name");
+          return res.status(404).json({ success: false, message: 'No residents found with this name' });
+      }
+
+      // Map through the results to extract name and userId
+      const results = querySnapshot.docs.map(doc => ({
+          name: doc.data().name,
+          userId: doc.data().userId,
+      }));
+
+      console.log("Residents found:", results);
+      return res.status(200).json({ success: true, residents: results });
+  } catch (error) {
+      console.error('Error fetching residents by name:', error);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
 // Update a resident's details
 export const updateResidentDetails = async (req, res) => {
   try {
@@ -197,41 +232,6 @@ export const deleteResident = async (req, res) => {
     } catch (error) {
         console.error('Error deleting resident:', error);
         return res.status(500).json({ message: 'Internal server error' });
-    }
-};
-
-// Get UserId from Name
-export const getUserIdFromName = async (req, res) => {
-    try {
-        console.log("Function called");
-        const { name } = req.body;
-        console.log(`Searching for residents with name: ${name}`);
-
-        if (!name) {
-            console.log("Name parameter is missing");
-            return res.status(400).json({ success: false, message: 'Name is required' });
-        }
-
-        const residentsRef = collection(db, 'residents');
-        const nameQuery = query(residentsRef, where("name", "==", name));
-        const querySnapshot = await getDocs(nameQuery);
-
-        if (querySnapshot.empty) {
-            console.log("No residents found with this name");
-            return res.status(404).json({ success: false, message: 'No residents found with this name' });
-        }
-
-        // Map through the results to extract name and userId
-        const results = querySnapshot.docs.map(doc => ({
-            name: doc.data().name,
-            userId: doc.data().userId,
-        }));
-
-        console.log("Residents found:", results);
-        return res.status(200).json({ success: true, residents: results });
-    } catch (error) {
-        console.error('Error fetching residents by name:', error);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
 

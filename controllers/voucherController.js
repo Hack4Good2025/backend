@@ -1,4 +1,5 @@
 import { db } from '../config/firebase.js';
+import { v4 as uuidv4 } from 'uuid';
 import { collection, addDoc, getDoc, getDocs, doc, updateDoc, deleteDoc, increment, FieldValue, query, where } from 'firebase/firestore';
 
 // Create a new voucher task
@@ -32,6 +33,7 @@ export const createTask = async (req, res) => {
 
       const taskRef = await addDoc(collection(db, 'voucher_tasks'), newTask);
       newTask.voucherTaskId = taskRef.id;
+      await updateDoc(taskRef, { voucherTaskId: taskRef.id });
 
       res.status(201).json(newTask);
   } catch (error) {
@@ -87,8 +89,8 @@ export const viewTasksClaimed = async (req, res) => {
   }
 };
 
-// View a specific task by ID
-export const viewTaskByID = async (req, res) => {
+// View a specific task by voucherTaskId
+export const viewTasksByVoucherId = async (req, res) => {
   const { voucherTaskId } = req.body;
 
   try {
@@ -102,6 +104,42 @@ export const viewTaskByID = async (req, res) => {
       res.status(200).json({ voucherTaskId: taskSnapshot.id, ...taskSnapshot.data() });
   } catch (error) {
       res.status(500).json({ error: 'Failed to retrieve task', details: error.message });
+  }
+};
+
+// View tasks claimed by userId
+export const viewTasksByUserId = async (req, res) => {
+  const { userId } = req.body;
+
+  try {
+      // Check if the userId exists in the residents collection
+      const residentRef = doc(db, 'residents', userId);
+      const residentSnapshot = await getDoc(residentRef);
+
+      if (!residentSnapshot.exists()) {
+          return res.status(404).json({ error: 'User ID does not exist in residents collection' });
+      }
+
+      // Query to get tasks claimed by the user
+      const tasksQuery = query(
+          collection(db, 'voucher_tasks'),
+          where('userId', '==', userId)
+      );
+
+      const snapshot = await getDocs(tasksQuery);
+      const claimedTasks = snapshot.docs.map(doc => ({
+          voucherTaskId: doc.id,
+          ...doc.data(),
+      }));
+
+      // Check if the list is empty
+      if (claimedTasks.length === 0) {
+          return res.status(200).json({ message: 'No claimed tasks available for this user.' });
+      }
+
+      res.status(200).json(claimedTasks);
+  } catch (error) {
+      res.status(500).json({ error: 'Failed to retrieve tasks for the user', details: error.message });
   }
 };
 

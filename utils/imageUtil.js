@@ -60,10 +60,27 @@ export const deleteFile = async (filePath) => {
 };
 
 // Combined function to delete previous image and upload a new one
-export const deletePreviousAndUploadNewImage = async (previousImagePath, newFile, category, id) => {
-  // Delete the previous image
-  await deleteFile(previousImagePath);
+// export const deletePreviousAndUploadNewImage = async (previousImagePath, newFile, category, id) => {
+//     // Delete the previous image
+//     await deleteFile(previousImagePath);
 
-  // Upload the new image and return the signed URL
-  return await uploadFileAndGetSignedUrl(newFile, category, id);
+//     // Upload the new image and return the signed URL
+//     return await uploadFileAndGetSignedUrl(newFile, category, id);
+// };
+
+export const deletePreviousAndUploadNewImage = async (previousImagePath, newFile, category, id) => {
+  try {
+      // Log the path being deleted
+      console.log(`Attempting to delete previous image at path: ${previousImagePath}`);
+
+      // Delete the previous image
+      await deleteFile(previousImagePath);
+      console.log(`Deleted previous image at path: ${previousImagePath}`);
+
+      // Upload the new image and return the signed URL
+      return await uploadFileAndGetSignedUrl(newFile, category, id);
+  } catch (error) {
+      console.error(`Error deleting file: ${error.message}`);
+      throw new Error('Failed to delete the file');
+  }
 };

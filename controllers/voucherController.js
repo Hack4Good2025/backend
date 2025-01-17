@@ -1,44 +1,56 @@
 import { db } from '../config/firebase.js';
-import { v4 as uuidv4 } from 'uuid';
-import { collection, addDoc, getDoc, getDocs, doc, updateDoc, deleteDoc, increment, FieldValue, query, where } from 'firebase/firestore';
+import { collection, addDoc, setDoc, getDoc, getDocs, doc, updateDoc, deleteDoc, increment, query, where } from 'firebase/firestore';
+import { deletePreviousAndUploadNewImage, uploadFileAndGetSignedUrl } from '../utils/imageUtil.js'; // Adjust the import according to your structure
+
 
 // Create a new voucher task
-// TODO: setup firebase storage for image uploading
 export const createTask = async (req, res) => {
-  const { value, taskName } = req.body;
+    const { value, taskName } = req.body;
+    const imageFile = req.file;
 
-  const intValue = parseInt(value, 10); // Convert to integer
+    const intValue = parseInt(value, 10); // Convert to integer
 
-  // Validation: Check if value is a positive integer
-  if (isNaN(intValue) || intValue <= 0) {
-      return res.status(400).json({ error: 'Value must be a positive integer.' });
-  }
+    // Validation: Check if value is a positive integer
+    if (isNaN(intValue) || intValue <= 0) {
+        return res.status(400).json({ error: 'Value must be a positive integer.' });
+    }
 
-  // Validation: Check if taskName is not empty
-  if (!taskName || !taskName.trim()) {
-      return res.status(400).json({ error: 'Task name cannot be empty.' });
-  }
+    // Validation: Check if taskName is not empty
+    if (!taskName || !taskName.trim()) {
+        return res.status(400).json({ error: 'Task name cannot be empty.' });
+    }
 
-  try {
-      const newTask = {
-          voucherTaskId: null,
-          value: intValue,
-          taskName: taskName.trim(),
-          userId: null,
-          claimStatus: false,
-          distributedStatus: false,
-          updatedAt: null,
-          createdAt: new Date(),
-      };
 
-      const taskRef = await addDoc(collection(db, 'voucher_tasks'), newTask);
-      newTask.voucherTaskId = taskRef.id;
-      await updateDoc(taskRef, { voucherTaskId: taskRef.id });
+    try {
+      const taskRef = doc(collection(db, 'voucher_tasks'));
 
-      res.status(201).json(newTask);
-  } catch (error) {
-      res.status(500).json({ error: 'Failed to create task', details: error.message });
-  }
+      let imageUrl = null;
+
+        if (imageFile) {
+          imageUrl = await uploadFileAndGetSignedUrl(imageFile, 'voucher_tasks', taskRef.id);
+        }
+
+        const taskData = {
+            voucherTaskId: taskRef.id,
+            value: intValue,
+            taskName: taskName,
+            userId: null,
+            claimStatus: false,
+            distributedStatus: false,
+            imageUrl,
+            updatedAt: null,
+            createdAt: new Date(),
+        };
+
+        await setDoc(taskRef, taskData);
+
+        return res.status(201).json({
+          message: 'Task created successfully',
+          task: taskData,
+      });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to create task', details: error.message });
+    }
 };
 
 // View all tasks
@@ -145,49 +157,58 @@ export const viewTasksByUserId = async (req, res) => {
 
 // Update a task
 export const updateTask = async (req, res) => {
-    const { voucherTaskId, value, taskName } = req.body;
+  const { voucherTaskId, value, taskName } = req.body;
+  const imageFile = req.file; // Get the uploaded image file
 
-    // Validate that at least one field is provided for update
-    if (value === undefined && taskName === undefined) {
-        return res.status(400).json({ error: 'At least one of value or taskName is required' });
+  // Validate that at least one field is provided for update
+  if (value === undefined && taskName === undefined && !imageFile) {
+      return res.status(400).json({ error: 'At least one of value, taskName, or image is required' });
+  }
+
+  // Validate the value if provided
+  if (value !== undefined) {
+      const intValue = parseInt(value, 10); // Convert to integer
+      if (isNaN(intValue) || intValue <= 0) {
+          return res.status(400).json({ error: 'Value must be a positive integer.' });
+      }
+  }
+
+  // Validate the taskName if provided
+  if (taskName !== undefined) {
+      if (!taskName || !taskName.trim()) {
+          return res.status(400).json({ error: 'Task name cannot be empty.' });
+      }
+  }
+
+  try {
+      const taskRef = doc(db, 'voucher_tasks', voucherTaskId);
+      const taskSnapshot = await getDoc(taskRef);
+
+      // Check if task exists
+      if (!taskSnapshot.exists()) {
+          return res.status(404).json({ error: 'Task not found' });
+      }
+
+      // Prepare updates
+      const updates = {
+        ...(value !== undefined && { value: parseInt(value, 10) }),  // Add validated value if provided
+        ...(taskName !== undefined && { taskName: taskName.trim() }),  // Add validated taskName if provided
+        updatedAt: new Date(),  // Add updatedAt timestamp
+    };
+
+      // Get the previous image path
+      if (imageFile) {
+        const previousImagePath = `voucher_tasks/${voucherTaskId}`; // Path for the previous image
+        const imageUrl = await deletePreviousAndUploadNewImage(previousImagePath, imageFile, 'voucher_tasks', voucherTaskId);
+        updates.imageUrl = imageUrl; // Update the image URL with the new one
     }
 
-    // Validate the value if provided
-    if (value !== undefined) {
-        const intValue = parseInt(value, 10); // Convert to integer
-        if (isNaN(intValue) || intValue <= 0) {
-            return res.status(400).json({ error: 'Value must be a positive integer.' });
-        }
-    }
+      await updateDoc(taskRef, updates);
 
-    // Validate the taskName if provided
-    if (taskName !== undefined) {
-        if (!taskName || !taskName.trim()) {
-            return res.status(400).json({ error: 'Task name cannot be empty.' });
-        }
-    }
-
-    try {
-        const taskRef = doc(db, 'voucher_tasks', voucherTaskId);
-        const taskSnapshot = await getDoc(taskRef);
-
-        // Check if task exists
-        if (!taskSnapshot.exists()) {
-            return res.status(404).json({ error: 'Task not found' });
-        }
-
-        // Prepare updates
-        const updates = {
-            ...(value !== undefined && { value: parseInt(value, 10) }),  // Add validated value if provided
-            ...(taskName !== undefined && { taskName: taskName.trim() }),  // Add validated taskName if provided
-            updatedAt: new Date(),  // Add updatedAt timestamp
-        };
-
-        await updateDoc(taskRef, updates);
-        res.status(200).json({ message: 'Task updated successfully' });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to update task', details: error.message });
-    }
+      res.status(200).json({ message: 'Task updated successfully' });
+  } catch (error) {
+      res.status(500).json({ error: 'Failed to update task', details: error.message });
+  }
 };
 
 // Delete a task

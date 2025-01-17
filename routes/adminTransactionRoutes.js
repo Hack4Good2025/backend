@@ -16,7 +16,7 @@ import {
 } from '../controllers/adminTransactionController.js';
 
 const router = express.Router();
-const upload = multer();
+const upload = multer({ storage: multer.memoryStorage() }); // Store files in memory for upload
 
 // Admin Routes for Product Management
 router.post('/products/create', createProduct);

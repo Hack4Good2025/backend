@@ -10,6 +10,7 @@ import {
     generateInventoryReport,
     generateReport,
     downloadReport,
+    fetchLatestReport,
 } from '../controllers/adminTransactionController.js';
 
 const router = express.Router();
@@ -23,10 +24,10 @@ router.put('/products/update/stock', updateProductStock);
 router.delete('/products/delete', deleteProduct);
 
 // Admin Routes for Inventory Management
-// TODO: integrate inventory report with pre-order list
 router.get('/inventory/report', generateInventoryReport);
-router.post("inventory/generate-report", generateReport);
-router.get("/inventory/download-report", downloadReport);
+router.post('/inventory/report/generate', generateReport);
+router.get('/inventory/report/download', downloadReport);
+router.get('/inventory/report/fetchlatest', fetchLatestReport)
 
 // TODO: automated weekly report generator
 

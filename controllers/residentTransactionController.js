@@ -1,5 +1,5 @@
 import { db } from '../config/firebase.js';
-import { collection, doc, setDoc, getDoc, updateDoc, deleteDoc, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, getDoc, updateDoc, deleteDoc, getDocs, Timestamp, arrayUnion } from 'firebase/firestore';
 
 // Purchase a product
 export const purchaseProduct = async (req, res) => {
@@ -304,14 +304,31 @@ export const preOrderProducts = async (req, res) => {
           return res.status(404).json({ message: 'Product not found' });
       }
 
+      // Get product name from the product document
+      const productData = productSnap.data();
+      const productName = productData.name;
+
       // Create pre-order record
       const preOrderRef = doc(collection(db, 'preorders'));
       await setDoc(preOrderRef, {
           userId,
           productId,
+          productName,
           quantity,
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now(),
+      });
+
+      // Append the pre-order to the resident's preOrderRequests array
+      const residentRef = doc(db, 'residents', userId);
+      await updateDoc(residentRef, {
+          preOrderRequests: arrayUnion({
+              preOrderId: preOrderRef.id,
+              productId,
+              productName,
+              quantity,
+              createdAt: Timestamp.now(),
+          }),
       });
 
       return res.status(201).json({ message: 'Pre-order created successfully', preOrderId: preOrderRef.id });

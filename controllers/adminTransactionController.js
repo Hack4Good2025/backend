@@ -138,45 +138,90 @@ export const updateProductStock = async (req, res) => {
   }
 };
 
+// Helper function to convert pre-orders to transactions
+const fulfillPreOrders = async (productId, newStockLevel) => {
+    const preordersRef = collection(db, 'preorders');
+    const preordersSnapshot = await getDocs(preordersRef);
+
+    const fulfilledTransactions = [];
+
+    for (const preorderDoc of preordersSnapshot.docs) {
+        const preorderData = preorderDoc.data();
+        if (preorderData.productId === productId) {
+            const { userId, quantity } = preorderData;
+
+            // Check if there's enough stock to fulfill the pre-order
+            if (newStockLevel >= quantity) {
+                // Create transaction record
+                const transactionRef = doc(collection(db, 'transactions'));
+                const transactionData = {
+                    userId,
+                    productId,
+                    quantity,
+                    createdAt: Timestamp.now(),
+                    updatedAt: Timestamp.now(),
+                };
+
+                await setDoc(transactionRef, transactionData);
+                fulfilledTransactions.push(transactionRef.id);
+
+                // Update the stock level
+                newStockLevel -= quantity;
+
+                // Remove the pre-order after fulfillment
+                await deleteDoc(preorderDoc.ref);
+            }
+        }
+    }
+
+    return { fulfilledTransactions, remainingStock: newStockLevel }; // Return remaining stock
+};
+
+// Add product stock
 export const addProductStock = async (req, res) => {
-  const { productId, increment } = req.body;
+    const { productId, increment } = req.body;
 
-  // Validate that productId is provided
-  if (!productId) {
-      return res.status(400).json({ message: 'Product ID is required.' });
-  }
+    // Validate that productId is provided
+    if (!productId) {
+        return res.status(400).json({ message: 'Product ID is required.' });
+    }
 
-  // Validate that increment is a positive integer
-  if (!Number.isInteger(increment) || increment <= 0) {
-      return res.status(400).json({ message: 'Increment value must be a positive integer.' });
-  }
+    // Validate that increment is a positive integer
+    if (!Number.isInteger(increment) || increment <= 0) {
+        return res.status(400).json({ message: 'Increment value must be a positive integer.' });
+    }
 
-  try {
-      const productRef = doc(db, 'products', productId);
-      const productSnap = await getDoc(productRef);
+    try {
+        const productRef = doc(db, 'products', productId);
+        const productSnap = await getDoc(productRef);
 
-      // Check if the product exists
-      if (!productSnap.exists()) {
-          return res.status(404).json({ message: 'Product not found.' });
-      }
+        // Check if the product exists
+        if (!productSnap.exists()) {
+            return res.status(404).json({ message: 'Product not found.' });
+        }
 
-      const productData = productSnap.data();
-      const newStock = productData.stock + increment; // Increment the stock
+        const productData = productSnap.data();
+        const newStock = productData.stock + increment; // Increment the stock
 
-      await updateDoc(productRef, {
-          stock: newStock,
-          updatedAt: Timestamp.now(),
-      });
+        // Update the product stock in Firestore
+        await updateDoc(productRef, {
+            stock: newStock,
+            updatedAt: Timestamp.now(),
+        });
 
-      // Return the updated stock level in the response
-      return res.status(200).json({
-          message: 'Stock updated successfully',
-          updatedStock: newStock
-      });
-  } catch (error) {
-      console.error('Error adding stock: ', error);
-      return res.status(500).json({ message: 'Internal Server Error' });
-  }
+        // Fulfill any pre-orders if possible
+        const { fulfilledTransactions, remainingStock } = await fulfillPreOrders(productId, newStock);
+
+        // Return the updated stock level and fulfilled transactions in the response
+        return res.status(200).json({
+            message: 'Stock updated successfully',
+            updatedStock: remainingStock, // Reflect the stock after fulfilling pre-orders
+            fulfilledTransactions // Include the fulfilled transactions
+        });
+    } catch (error) {
+        console.error('Error adding stock: ', error);
+        return res.status(500).json({ message: 'Internal Server Error' });
+    }
 };
 
 // Delete a product

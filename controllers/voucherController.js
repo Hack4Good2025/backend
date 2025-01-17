@@ -67,40 +67,6 @@ export const viewTasks = async (req, res) => {
   }
 };
 
-// View all tasks that are not claimed
-export const viewTasksNotClaimed = async (req, res) => {
-  try {
-      const snapshot = await getDocs(collection(db, 'voucher_tasks'));
-      const tasksNotClaimed = snapshot.docs
-          .map(doc => ({ voucherTaskId: doc.id, ...doc.data() }))
-          .filter(task => !task.claimStatus); // Filter for tasks that are not claimed
-
-      // Check if the list is empty
-      if (tasksNotClaimed.length === 0) {
-        return res.status(200).json({ message: 'No unclaimed tasks available.' });
-      }
-      res.status(200).json(tasksNotClaimed);
-  } catch (error) {
-      res.status(500).json({ error: 'Failed to retrieve tasks', details: error.message });
-  }
-};
-
-// View all tasks that are claimed
-export const viewTasksClaimed = async (req, res) => {
-  try {
-      const snapshot = await getDocs(collection(db, 'voucher_tasks'));
-      const tasksClaimed = snapshot.docs
-          .map(doc => ({ voucherTaskId: doc.id, ...doc.data() }))
-          .filter(task => task.claimStatus); // Filter for tasks that are claimed
-      if (tasksClaimed.length === 0) {
-        return res.status(200).json({ message: 'No claimed tasks available.' });
-      }
-      res.status(200).json(tasksClaimed);
-  } catch (error) {
-      res.status(500).json({ error: 'Failed to retrieve tasks', details: error.message });
-  }
-};
-
 // View a specific task by voucherTaskId
 export const viewTasksByVoucherId = async (req, res) => {
   const { voucherTaskId } = req.body;
@@ -152,6 +118,40 @@ export const viewTasksByUserId = async (req, res) => {
       res.status(200).json(claimedTasks);
   } catch (error) {
       res.status(500).json({ error: 'Failed to retrieve tasks for the user', details: error.message });
+  }
+};
+
+// View all tasks that are not claimed
+export const viewTasksNotClaimed = async (req, res) => {
+  try {
+      const snapshot = await getDocs(collection(db, 'voucher_tasks'));
+      const tasksNotClaimed = snapshot.docs
+          .map(doc => ({ voucherTaskId: doc.id, ...doc.data() }))
+          .filter(task => !task.claimStatus); // Filter for tasks that are not claimed
+
+      // Check if the list is empty
+      if (tasksNotClaimed.length === 0) {
+        return res.status(200).json({ message: 'No unclaimed tasks available.' });
+      }
+      res.status(200).json(tasksNotClaimed);
+  } catch (error) {
+      res.status(500).json({ error: 'Failed to retrieve tasks', details: error.message });
+  }
+};
+
+// View all tasks that are claimed
+export const viewTasksClaimed = async (req, res) => {
+  try {
+      const snapshot = await getDocs(collection(db, 'voucher_tasks'));
+      const tasksClaimed = snapshot.docs
+          .map(doc => ({ voucherTaskId: doc.id, ...doc.data() }))
+          .filter(task => task.claimStatus); // Filter for tasks that are claimed
+      if (tasksClaimed.length === 0) {
+        return res.status(200).json({ message: 'No claimed tasks available.' });
+      }
+      res.status(200).json(tasksClaimed);
+  } catch (error) {
+      res.status(500).json({ error: 'Failed to retrieve tasks', details: error.message });
   }
 };
 

@@ -43,9 +43,10 @@ This section documents the endpoints available for managing residents within the
   -d '{
       "name": "John Doe",
       "password": "securePassword123",
-      "image": "path/to/image.jpg"  // Note: Adjust for file upload
+      "image": "path/to/image.jpg"
   }'
   ```
+---
 
 ### 2. Get All Residents
 - **Method**: `GET`
@@ -84,6 +85,7 @@ This section documents the endpoints available for managing residents within the
   ```bash
   curl --location 'http://localhost:3000/api/residents/get/all'
   ```
+---
 
 ### 3. Get Resident by User ID
 - **Method**: `GET`
@@ -127,7 +129,7 @@ This section documents the endpoints available for managing residents within the
     }
     '
   ```
-
+---
 ### 4. Get User ID from Name
 - **Method**: `POST`
 - **Path**: `/api/residents/get/userid`
@@ -179,7 +181,7 @@ This section documents the endpoints available for managing residents within the
       "name": "user"
   }'
   ```
-
+---
 ### 5. Update Resident's Details
 - **Method**: `PUT`
 - **Path**: `/api/residents/update/details`
@@ -222,9 +224,9 @@ This section documents the endpoints available for managing residents within the
     --form 'userId="5P3N8Y"' \
     --form 'name=""' \
     --form 'password=""' \
-    --form 'image=@"/Users/yeo_menghan/Downloads/6251443861788409551.jpg"'
+    --form 'image=@"path/to/image.jpg"'
   ```
-
+---
 ### 6. Update Resident Voucher Balance
 - **Method**: `PUT`
 - **Path**: `/api/residents/update/voucher-balance`
@@ -269,7 +271,7 @@ This section documents the endpoints available for managing residents within the
       "newVoucherBalance": 500
   }'
   ```
-
+---
 ### 7. Delete a Resident
 - **Method**: `DELETE`
 - **Path**: `/api/residents/delete`
@@ -305,7 +307,7 @@ This section documents the endpoints available for managing residents within the
       "userId": "5P3N8Y"
   }'
   ```
-
+---
 ### 8. Get User ID from Name
 - **Method**: `POST`
 - **Path**: `/api/residents/get/userid`
@@ -358,7 +360,7 @@ This section documents the endpoints available for managing residents within the
       "userId": "7884a685-ff30-4fe2-bf3c-57ce2fd75c0c"
   }'
   ```
-
+---
 ### 9. Reset Resident's Password
 - **Method**: `PUT`
 - **Path**: `/api/residents/reset/password`
@@ -398,7 +400,7 @@ This section documents the endpoints available for managing residents within the
       "requestId": "7884a685-ff30-4fe2-bf3c-57ce2fd75c0c_1736858274319"
   }'
   ```
-
+---
 ### 10. Login User
 - **Method**: `POST`
 - **Path**: `/api/users/login`

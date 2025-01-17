@@ -29,7 +29,4 @@ router.post('/reset-password', resetResidentPassword);
 // User login
 router.post('/login', loginUser);
 
-// Get Image
-router.get('/image/:userId', getResidentImage);
-
 export default router;

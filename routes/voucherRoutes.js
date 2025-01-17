@@ -1,5 +1,4 @@
 import express from 'express';
-import multer from 'multer';
 import {
     createTask,
     viewTasks,
@@ -18,7 +17,6 @@ import {
 } from '../controllers/voucherController.js';
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() }); // Store files in memory for upload
 
 // Task Management
 router.post('/create', createTask);
@@ -33,9 +31,6 @@ router.delete('/delete', deleteTask);
 // Claim / Unclaim Task
 router.patch('/claim', claimTask);
 router.patch('/unclaim', unclaimTask);
-
-// // Notify Admin
-// router.post('/notify/:id', notifyAdmin);
 
 // Approve / Unapprove / Reject Task
 router.patch('/approve', approveVoucher);

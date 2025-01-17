@@ -325,8 +325,6 @@ export const unclaimTask = async (req, res) => {
     }
 };
 
-// TODO: Notify Admin (similar to request password change?)
-
 // Approve voucher
 export const approveVoucher = async (req, res) => {
   const { voucherTaskId } = req.body;

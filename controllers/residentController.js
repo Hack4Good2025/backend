@@ -1,14 +1,17 @@
 import { db } from '../config/firebase.js';
 import { collection, doc, setDoc, getDoc, updateDoc, deleteDoc, query, where, getDocs} from 'firebase/firestore';
 import bcrypt from 'bcrypt';
+import { bucket } from '../config/googleCloud.js';
+import { deletePreviousAndUploadNewImage, uploadFileAndGetSignedUrl, deleteFile} from '../utils/imageUtil.js';
 
 // Create a new resident
 export const createResident = async (req, res) => {
-    try {
-        const { name, password } = req.body;
+  try {
+      const { name, password } = req.body;
+      const imageFile = req.file;
 
-        // Function to generate a memorable userId (6 characters)
-        const generateUserId = () => {
+      // Function to generate a memorable userId (6 characters)
+      const generateUserId = () => {
           const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
           let userId = '';
           for (let i = 0; i < 6; i++) {
@@ -17,32 +20,39 @@ export const createResident = async (req, res) => {
           return userId;
       };
 
-        const residentsRef = collection(db, 'residents');
-        const userId = generateUserId();
+      const residentsRef = collection(db, 'residents');
+      const userId = generateUserId();
 
-        // Hash the password
-        const passwordHash = await bcrypt.hash(password, 10);
+      // Hash the password
+      const passwordHash = await bcrypt.hash(password, 10);
 
-        const newResident = {
-            userId,
-            name,
-            passwordHash,
-            transactionHistory: [],
-            preOrderRequests: [],
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            voucherBalance: 100 // start off with 100
-        };
+      let imageUrl = null;
 
-        // Save to Firestore using userId as the document ID
-        await setDoc(doc(residentsRef, userId), newResident);
+      if (imageFile) {
+          imageUrl = await uploadFileAndGetSignedUrl(imageFile, 'residents', userId);
+      }
 
-        return res.status(201).json({ message: 'Resident created successfully', userId });
-    } catch (error) {
-        console.error('Error creating resident:', error);
-        return res.status(500).json({ message: 'Internal server error' });
-    }
+      const newResident = {
+          userId,
+          name,
+          passwordHash,
+          transactionHistory: [],
+          preOrderRequests: [],
+          imageUrl,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          voucherBalance: 100, // Initial voucher balance
+      };
+
+      await setDoc(doc(residentsRef, userId), newResident);
+
+      return res.status(201).json({ message: 'Resident created successfully', resident: newResident });
+  } catch (error) {
+      console.error('Error creating resident:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+  }
 };
+
 
 // Get all residents
 export const getAllResidents = async (req, res) => {
@@ -84,36 +94,53 @@ export const getResidentById = async (req, res) => {
     }
 };
 
-// Update Resident
-export const updateResident = async (req, res) => {
-    try {
-        const { userId, name, password } = req.body;
+// Update a resident's details
+export const updateResidentDetails = async (req, res) => {
+  try {
+      const { userId, name, password } = req.body;
+      const imageFile = req.file;
 
-        // Validate that name and password are provided
-        if (name === null || name === undefined || password === null || password === undefined) {
-            return res.status(400).json({ message: 'Name and password cannot be null.' });
-        }
+      const residentRef = doc(db, 'residents', userId);
+      const residentSnap = await getDoc(residentRef);
 
-        const residentRef = doc(db, 'residents', userId);
-        const residentSnap = await getDoc(residentRef);
+      if (!residentSnap.exists()) {
+          return res.status(404).json({ message: 'Resident not found' });
+      }
 
-        if (!residentSnap.exists()) {
-            return res.status(404).json({ message: 'Resident not found' });
-        }
+      // Prepare the data to update
+      const updates = {};
 
-        // Prepare the data to update
-        const updatedData = {
-            name,
-            passwordHash: await bcrypt.hash(password, 10) // Hash the new password
-        };
+      // Validate and update name if provided
+      if (name && isValidField(name)) {
+          updates.name = name;
+      } else if (name) {
+          return res.status(400).json({ message: 'Name cannot be empty or whitespace.' });
+      }
 
-        await updateDoc(residentRef, updatedData);
+      // Validate and update password if provided
+      if (password && isValidField(password)) {
+          updates.passwordHash = await bcrypt.hash(password, 10);
+      } else if (password) {
+          return res.status(400).json({ message: 'Password cannot be empty or whitespace.' });
+      }
 
-        return res.status(200).json({ message: 'Resident updated successfully' });
-    } catch (error) {
-        console.error('Error updating resident:', error);
-        return res.status(500).json({ message: 'Internal server error' });
-    }
+      // If an image file is provided, manage the upload and deletion
+      if (imageFile) {
+          const previousImagePath = `residents/${userId}`
+          const imageUrl = await deletePreviousAndUploadNewImage(previousImagePath, imageFile, 'residents', userId);
+          updates.imageUrl = imageUrl
+      }
+
+      // Update the resident document in Firestore, only if there's anything to update
+      if (Object.keys(updates).length > 0) {
+        await updateDoc(residentRef, updates);
+      }
+
+      return res.status(200).json({ message: 'Resident updated successfully' });
+  } catch (error) {
+      console.error('Error updating resident:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+  }
 };
 
 // Update Resident Voucher Balance
@@ -143,7 +170,6 @@ export const updateResidentVoucherBalance = async (req, res) => {
   }
 };
 
-
 // Delete a resident
 export const deleteResident = async (req, res) => {
     try {
@@ -154,6 +180,16 @@ export const deleteResident = async (req, res) => {
         if (!residentSnap.exists()) {
             return res.status(404).json({ message: 'Resident not found' });
         }
+
+        // Get the image URL from the task data
+        const { imageUrl } = residentSnap.data();
+
+        // Delete the associated image if it exists
+        if (imageUrl) {
+          const imagePath = `residents/${userId}`;
+          await deleteFile(imagePath);
+          console.log(`Delete image at path: ${imagePath}`);
+      }
 
         await deleteDoc(residentRef);
 
@@ -293,4 +329,10 @@ export const loginUser = async (req, res) => {
         console.error('Error logging in resident:', error);
         return res.status(500).json({ message: 'Internal server error' });
     }
+};
+
+/* HELPER FUNCTIONS */
+// Check if a string is non-empty, non-whitespace
+const isValidField = (field) => {
+  return typeof field === 'string' && field.trim() !== '';
 };

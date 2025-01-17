@@ -1,4 +1,5 @@
 import express from 'express';
+import multer from 'multer';
 
 import {
     createProduct,
@@ -15,6 +16,7 @@ import {
 } from '../controllers/adminTransactionController.js';
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() }); // Store files in memory for upload
 
 // Admin Routes for Product Management
 router.post('/products/create', createProduct);

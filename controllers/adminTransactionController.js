@@ -1,4 +1,5 @@
 import { db } from '../config/firebase.js';
+import ExcelJS from 'exceljs';
 import { collection, doc, setDoc, getDoc, deleteDoc, updateDoc, getDocs, query, Timestamp } from 'firebase/firestore';
 
 // Create a new product
@@ -16,14 +17,6 @@ export const createProduct = async (req, res) => {
             imageUrl,
             createdAt: Timestamp.now(),
             updatedAt: Timestamp.now(),
-        });
-
-        // Update inventory immediately
-        await setDoc(doc(db, 'inventory', productRef.id), {
-            productId: productRef.id,
-            name: name,
-            quantityAvailable: stock,
-            lastUpdated: Timestamp.now(),
         });
 
         return res.status(201).json({ message: 'Product created successfully', productId: productRef.id });
@@ -202,10 +195,6 @@ export const deleteProduct = async (req, res) => {
 
         await deleteDoc(productRef);
 
-        // Delete the corresponding inventory entry
-        const inventoryRef = doc(db, 'inventory', productId);
-        await deleteDoc(inventoryRef);
-
         return res.status(200).json({ message: 'Product deleted successfully' });
     } catch (error) {
         console.error('Error deleting product: ', error);
@@ -223,7 +212,7 @@ export const generateInventoryReport = async (req, res) => {
           return {
               productId: doc.id,
               name: data.name,
-              stock: data.stock || null, // Default to null if stock is not defined
+              stock: data.stock || null,
           };
       });
 
@@ -233,3 +222,131 @@ export const generateInventoryReport = async (req, res) => {
       return res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
+// Function to generate the Excel file and store it in Firestore
+export const generateReport = async (req, res) => {
+  try {
+    // Fetch products
+    const productsRef = collection(db, 'products');
+    const productsSnapshot = await getDocs(productsRef);
+    const products = productsSnapshot.docs.map(doc => ({
+      productId: doc.id,
+      name: doc.data().name,
+      stock: doc.data().stock || 0, // Default to 0 if not defined
+    }));
+
+    // Fetch pre-orders
+    const preordersRef = collection(db, 'preorders');
+    const preordersSnapshot = await getDocs(preordersRef);
+    const preorders = preordersSnapshot.docs.map(doc => ({
+      preorderId: doc.id,
+      productId: doc.data().productId,
+      quantity: doc.data().quantity,
+      userId: doc.data().userId,
+      createdAt: doc.data().createdAt ? doc.data().createdAt.toDate().toISOString() : null,
+    }));
+
+    // Combine inventory and pre-orders into a single report
+    const reportData = products.map(product => {
+      const productPreorders = preorders.filter(preorder => preorder.productId === product.productId);
+      return {
+        productId: product.productId,
+        productName: product.name,
+        stock: product.stock,
+        totalPreordered: productPreorders.reduce((total, preorder) => total + preorder.quantity, 0),
+        preorders: productPreorders,
+      };
+    });
+
+    // Store the report in the "reports" collection
+    const reportDoc = {
+      createdAt: new Date(),
+      reportData: reportData,
+    };
+
+    await addDoc(collection(db, 'reports'), reportDoc);
+
+    res.status(201).json({ message: 'Report generated and stored successfully.' });
+  } catch (err) {
+    console.error("Error generating report: ", err);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+// Function to download the latest inventory report
+export const downloadReport = async (req, res) => {
+  try {
+    // Fetch the latest report from Firestore
+    const reportsRef = collection(db, 'reports');
+    const reportsSnapshot = await getDocs(reportsRef);
+    const reports = reportsSnapshot.docs.map(doc => ({
+      reportId: doc.id,
+      ...doc.data(),
+    }));
+
+    // If there are no reports, return an error
+    if (reports.length === 0) {
+      return res.status(404).json({ message: 'No reports available for download.' });
+    }
+
+    // Get the most recent report
+    const latestReport = reports[reports.length - 1]; // Assuming reports are sorted by createdAt
+
+    // Generate Excel file from the latest report
+    const xlsBuffer = await generateXLS(latestReport.reportData);
+    res.set("Content-Disposition", "attachment; filename=inventory_report.xlsx");
+    res.type("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.send(xlsBuffer);
+  } catch (err) {
+    console.error("Error downloading report: ", err);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+// Function to generate Excel using ExcelJS
+async function generateXLS(data) {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Inventory Report", {
+    pageSetup: { paperSize: 9, orientation: "landscape" },
+  });
+
+  // Set headers
+  worksheet.addRow(["Product ID", "Product Name", "Stock", "Total Preordered", "Preorders"]);
+
+  // Loop over the grouped data
+  data.forEach(item => {
+    const preordersList = item.preorders.map(preorder =>
+      `ID: ${preorder.preorderId}, Quantity: ${preorder.quantity}, User ID: ${preorder.userId}`
+    ).join("; ") || "No Preorders";
+
+    worksheet.addRow([
+      item.productId,
+      item.productName,
+      item.stock,
+      item.totalPreordered,
+      preordersList
+    ]);
+  });
+
+  // Define column widths
+  worksheet.getColumn(1).width = 20;
+  worksheet.getColumn(2).width = 30;
+  worksheet.getColumn(3).width = 15;
+  worksheet.getColumn(4).width = 20;
+  worksheet.getColumn(5).width = 50;
+
+  // Apply border styles
+  worksheet.eachRow((row) => {
+    row.eachCell((cell) => {
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
+      };
+    });
+  });
+
+  // Generate the XLS file
+  return workbook.xlsx.writeBuffer();
+}

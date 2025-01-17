@@ -31,7 +31,7 @@ export const createResident = async (req, res) => {
             preOrderRequests: [],
             createdAt: new Date(),
             updatedAt: new Date(),
-            voucherBalance: 0
+            voucherBalance: 100 // start off with 100
         };
 
         // Save to Firestore using userId as the document ID

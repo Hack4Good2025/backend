@@ -1,4 +1,5 @@
 import express from 'express';
+
 import {
     createProduct,
     viewProduct,
@@ -7,6 +8,8 @@ import {
     updateProductStock,
     deleteProduct,
     generateInventoryReport,
+    generateReport,
+    downloadReport,
 } from '../controllers/adminTransactionController.js';
 
 const router = express.Router();
@@ -22,6 +25,8 @@ router.delete('/products/delete', deleteProduct);
 // Admin Routes for Inventory Management
 // TODO: integrate inventory report with pre-order list
 router.get('/inventory/report', generateInventoryReport);
+router.post("inventory/generate-report", generateReport);
+router.get("/inventory/download-report", downloadReport);
 
 // TODO: automated weekly report generator
 

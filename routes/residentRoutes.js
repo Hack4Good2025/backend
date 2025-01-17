@@ -10,7 +10,6 @@ import {
     resetResidentPassword,
     getUserIdFromName,
     loginUser,
-    getResidentImage
 } from '../controllers/residentController.js';
 
 const router = express.Router();

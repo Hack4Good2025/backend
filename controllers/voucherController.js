@@ -1,6 +1,6 @@
 import { db } from '../config/firebase.js';
 import { collection, addDoc, setDoc, getDoc, getDocs, doc, updateDoc, deleteDoc, increment, query, where } from 'firebase/firestore';
-import { deletePreviousAndUploadNewImage, uploadFileAndGetSignedUrl } from '../utils/imageUtil.js'; // Adjust the import according to your structure
+import { deletePreviousAndUploadNewImage, uploadFileAndGetSignedUrl, deleteFile} from '../utils/imageUtil.js'; // Adjust the import according to your structure
 
 
 // Create a new voucher task
@@ -213,22 +213,34 @@ export const updateTask = async (req, res) => {
 
 // Delete a task
 export const deleteTask = async (req, res) => {
-  const { voucherTaskId } = req.body;
-  try {
-      const taskRef = doc(db, 'voucher_tasks', voucherTaskId);
+    const { voucherTaskId } = req.body;
 
-      const taskSnapshot = await getDoc(taskRef);
+    try {
+        const taskRef = doc(db, 'voucher_tasks', voucherTaskId);
+        const taskSnapshot = await getDoc(taskRef);
 
-      // Check if task exists
-      if (!taskSnapshot.exists()) {
-          return res.status(404).json({ error: 'Task not found' });
-      }
+        // Check if task exists
+        if (!taskSnapshot.exists()) {
+            return res.status(404).json({ error: 'Task not found' });
+        }
 
-      await deleteDoc(taskRef);
-      res.status(200).json({ message: 'Task deleted successfully' });
-  } catch (error) {
-      res.status(500).json({ error: 'Failed to delete task', details: error.message });
-  }
+        // Get the image URL from the task data
+        const { imageUrl } = taskSnapshot.data();
+
+        // Delete the associated image if it exists
+        if (imageUrl) {
+            const imagePath = `voucher_tasks/${voucherTaskId}`;
+            await deleteFile(imagePath); // Call your delete function
+            console.log(`Delete image at path: ${imagePath}`);
+        }
+
+        // Now delete the task document
+        await deleteDoc(taskRef);
+        res.status(200).json({ message: 'Task and associated image deleted successfully' });
+    } catch (error) {
+        console.error('Failed to delete task', error);
+        res.status(500).json({ error: 'Failed to delete task', details: error.message });
+    }
 };
 
 // Resident claim a task

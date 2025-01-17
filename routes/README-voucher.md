@@ -374,7 +374,7 @@ This section documents the endpoints available for managing voucher within the a
 ---
 
 ### 9. Claim Task
-- **Method**: `POST`
+- **Method**: `PATCH`
 - **Path**: `/api/vouchers/claim`
 - **Description**: Allows a resident to claim a specified voucher task.
 
@@ -427,7 +427,7 @@ This section documents the endpoints available for managing voucher within the a
 ---
 
 ### 10. Unclaim Task
-- **Method**: `POST`
+- **Method**: `PATCH`
 - **Path**: `/api/vouchers/unclaim`
 - **Description**: Allows a resident to unclaim a specified voucher task.
 
@@ -480,7 +480,7 @@ This section documents the endpoints available for managing voucher within the a
 ---
 
 ### 11. Approve Voucher
-- **Method**: `POST`
+- **Method**: `PATCH`
 - **Path**: `/api/vouchers/approve`
 - **Description**: Approves a specified voucher task and updates the resident's voucher balance.
 
@@ -526,7 +526,7 @@ This section documents the endpoints available for managing voucher within the a
 ---
 
 ### 12. Unapprove Voucher
-- **Method**: `POST`
+- **Method**: `PATCH`
 - **Path**: `/api/vouchers/unapprove`
 - **Description**: Reverts the approval of a specified voucher task and decrements the resident's voucher balance.
 
@@ -577,7 +577,7 @@ This section documents the endpoints available for managing voucher within the a
 ---
 
 ### 13. Reject Voucher
-- **Method**: `POST`
+- **Method**: `PATCH`
 - **Path**: `/api/vouchers/reject`
 - **Description**: Rejects a specified voucher task and reverts its user ID and distributed status.
 

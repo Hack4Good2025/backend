@@ -2,7 +2,7 @@ import { db } from '../config/firebase.js';
 import ExcelJS from 'exceljs';
 import { collection, doc, setDoc, getDoc, deleteDoc, updateDoc, getDocs, addDoc, orderBy, limit, query, Timestamp } from 'firebase/firestore';
 import { bucket } from '../config/googleCloud.js';
-import { uploadFileAndGetSignedUrl, deletePreviousAndUploadNewImage } from '../utils/imageUtil.js';
+import { uploadFileAndGetSignedUrl, deletePreviousAndUploadNewImage, deleteFile} from '../utils/imageUtil.js';
 
 
 // Create a new product
@@ -273,6 +273,14 @@ export const deleteProduct = async (req, res) => {
         // Check if the product exists
         if (!productSnap.exists()) {
             return res.status(404).json({ message: 'Product not found.' });
+        }
+
+        const { imageUrl } = productSnap.data();
+
+        if (imageUrl) {
+          const imagePath = `products/${productId}`; // Path for the previous image
+          await deleteFile(imagePath); // Call your delete function
+          console.log(`Delete image at path: ${imagePath}`);
         }
 
         await deleteDoc(productRef);

@@ -2,7 +2,8 @@ import express from 'express';
 import {
     createTask,
     viewTasks,
-    viewTaskByID,
+    viewTasksByVoucherId,
+    viewTasksByUserId,
     viewTasksNotClaimed,
     viewTasksClaimed,
     updateTask,
@@ -19,8 +20,9 @@ const router = express.Router();
 
 // Task Management
 router.post('/create', createTask);
-router.get('/viewtasks', viewTasks);
-router.get('/viewtask/id', viewTaskByID);
+router.get('/viewtasks/all', viewTasks);
+router.get('/viewtask/vouchertaskid', viewTasksByVoucherId);
+router.get('/viewtasks/userid', viewTasksByUserId);
 router.get('/viewtasks/notclaimed', viewTasksNotClaimed);
 router.get('/viewtasks/claimed', viewTasksClaimed);
 router.put('/update', updateTask);

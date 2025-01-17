@@ -2,7 +2,7 @@ import { db } from '../config/firebase.js';
 import ExcelJS from 'exceljs';
 import { collection, doc, setDoc, getDoc, deleteDoc, updateDoc, getDocs, addDoc, orderBy, limit, query, Timestamp } from 'firebase/firestore';
 import { bucket } from '../config/googleCloud.js';
-import { uploadFileAndGetSignedUrl } from '../utils/imageUtil.js';
+import { uploadFileAndGetSignedUrl, deletePreviousAndUploadNewImage } from '../utils/imageUtil.js';
 
 
 // Create a new product
@@ -17,7 +17,7 @@ export const createProduct = async (req, res) => {
 
       // If an image is provided, upload it and get the URL
       if (imageFile) {
-          imageUrl = await uploadFileAndGetSignedUrl(imageFile, productRef.id);
+          imageUrl = await uploadFileAndGetSignedUrl(imageFile, 'products', productRef.id);
       }
 
       const productData = {
@@ -78,9 +78,10 @@ export const viewProduct = async (req, res) => {
     }
 };
 
-// Update a product details (not stock)
+// Update a product's details (not stock)
 export const updateProductDetails = async (req, res) => {
-  const { productId, name, description, price, imageUrl, stock } = req.body;
+  const { productId, name, description, price, stock } = req.body;
+  const imageFile = req.file; // Get the uploaded image file
 
   // Alert the user if stock is included in the request body
   if (stock !== undefined) {
@@ -101,7 +102,13 @@ export const updateProductDetails = async (req, res) => {
       if (name !== undefined) updates.name = name;
       if (description !== undefined) updates.description = description;
       if (price !== undefined) updates.price = price;
-      if (imageUrl !== undefined) updates.imageUrl = imageUrl;
+
+      // If an image file is provided, upload it and get the signed URL
+      if (imageFile) {
+          const previousImagePath = `products/${productId}`; // Path for the previous image
+          const imageUrl = await deletePreviousAndUploadNewImage(previousImagePath, imageFile, 'products', productId);
+          updates.imageUrl = imageUrl; // Update the image URL with the new one
+      }
 
       // Update the product with the provided fields
       await updateDoc(productRef, {
@@ -109,7 +116,18 @@ export const updateProductDetails = async (req, res) => {
           updatedAt: Timestamp.now(),
       });
 
-      return res.status(200).json({ message: 'Product updated successfully' });
+      // Fetch the updated product data
+      const updatedProductSnap = await getDoc(productRef);
+      const productData = updatedProductSnap.data();
+
+      // Return the updated product data in the response
+      return res.status(200).json({
+          message: 'Product updated successfully',
+          product: {
+              productId: productId,
+              ...productData,
+          },
+      });
   } catch (error) {
       console.error('Error updating product: ', error);
       return res.status(500).json({ message: 'Internal Server Error' });

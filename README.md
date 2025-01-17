@@ -25,8 +25,8 @@ The Minimart and Voucher System is designed to empower residents of the Muhammad
 ### Installation
 1. Clone the repository:
   ```bash
-  git clone [repository-url]
-  cd [repository-directory]
+  git clone https://github.com/Hack4Good2025/backend.git
+  cd backend
   ```
 
 2. Insert your .env and service-account.json files into the project directory.

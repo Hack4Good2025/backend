@@ -1,5 +1,4 @@
 import express from 'express';
-import multer from 'multer';
 import {
     createResident,
     getResidentById,
@@ -15,10 +14,9 @@ import {
 } from '../controllers/residentController.js';
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() }); // Store files in memory for upload
 
 // Resident Routes
-router.post('/create', upload.single('image'), createResident);
+router.post('/create', createResident);
 router.get('/get/all', getAllResidents);
 router.get('/get/id', getResidentById);
 router.get('/get/name', getUserIdFromName);

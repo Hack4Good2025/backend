@@ -1,6 +1,6 @@
 import { db } from '../config/firebase.js';
 import { collection, addDoc, setDoc, getDoc, getDocs, doc, updateDoc, deleteDoc, increment, query, where } from 'firebase/firestore';
-import { deletePreviousAndUploadNewImage, uploadFileAndGetSignedUrl, deleteFile} from '../utils/imageUtil.js'; // Adjust the import according to your structure
+import { deletePreviousAndUploadNewImage, uploadFileAndGetSignedUrl, deleteFile} from '../utils/imageUtil.js';
 
 
 // Create a new voucher task
@@ -22,9 +22,9 @@ export const createTask = async (req, res) => {
 
 
     try {
-      const taskRef = doc(collection(db, 'voucher_tasks'));
+        const taskRef = doc(collection(db, 'voucher_tasks'));
 
-      let imageUrl = null;
+        let imageUrl = null;
 
         if (imageFile) {
           imageUrl = await uploadFileAndGetSignedUrl(imageFile, 'voucher_tasks', taskRef.id);
@@ -230,7 +230,7 @@ export const deleteTask = async (req, res) => {
         // Delete the associated image if it exists
         if (imageUrl) {
             const imagePath = `voucher_tasks/${voucherTaskId}`;
-            await deleteFile(imagePath); // Call your delete function
+            await deleteFile(imagePath);
             console.log(`Delete image at path: ${imagePath}`);
         }
 

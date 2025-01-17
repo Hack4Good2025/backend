@@ -1,5 +1,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
+import multer from 'multer';
 import cors from 'cors';
 import residentRoutes from './routes/residentRoutes.js';
 import voucherRoutes from './routes/voucherRoutes.js';
@@ -12,11 +13,13 @@ dotenv.config();
 // Initialize Express
 const app = express();
 const PORT = process.env.PORT || 3000;
+const upload = multer(); // Initialize multer
 
 // Middleware
 app.use(cors()); // Enable CORS for all routes
 app.use(express.json()); // Parses incoming JSON requests
 app.use(express.urlencoded({ extended: true })); // Parses URL-encoded data
+app.use(upload.single('image')); // Handle single file uploads
 
 // Routes
 app.use('/api/residents', residentRoutes);

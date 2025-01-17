@@ -117,36 +117,60 @@ export const getResidentById = async (req, res) => {
     }
 };
 
-// Update Resident
-export const updateResident = async (req, res) => {
-    try {
-        const { userId, name, password } = req.body;
+// Update a resident's details
+export const updateResidentDetails = async (req, res) => {
+  try {
+      const { userId, name, password } = req.body;
+      const imageFile = req.file;
 
-        // Validate that name and password are provided
-        if (name === null || name === undefined || password === null || password === undefined) {
-            return res.status(400).json({ message: 'Name and password cannot be null.' });
-        }
+      const residentRef = doc(db, 'residents', userId);
+      const residentSnap = await getDoc(residentRef);
 
-        const residentRef = doc(db, 'residents', userId);
-        const residentSnap = await getDoc(residentRef);
+      if (!residentSnap.exists()) {
+          return res.status(404).json({ message: 'Resident not found' });
+      }
 
-        if (!residentSnap.exists()) {
-            return res.status(404).json({ message: 'Resident not found' });
-        }
+      // Prepare the data to update
+      const updatedData = {};
 
-        // Prepare the data to update
-        const updatedData = {
-            name,
-            passwordHash: await bcrypt.hash(password, 10) // Hash the new password
-        };
+      // Validate and update name if provided
+      if (name && isValidField(name)) {
+          updatedData.name = name;
+      } else if (name) {
+          return res.status(400).json({ message: 'Name cannot be empty or whitespace.' });
+      }
 
+      // Validate and update password if provided
+      if (password && isValidField(password)) {
+          updatedData.passwordHash = await bcrypt.hash(password, 10);
+      } else if (password) {
+          return res.status(400).json({ message: 'Password cannot be empty or whitespace.' });
+      }
+
+      // Get the current resident data to access the existing image URL
+      const currentData = residentSnap.data();
+      const currentImageUrl = currentData.image;
+
+      // If an image file is provided, manage the upload and deletion
+      if (imageFile) {
+          // Delete the previous image
+          await deleteImage(currentImageUrl);
+
+          // Upload the new image and get the signed URL
+          const imageUrl = await uploadImage(userId, imageFile);
+          updatedData.image = imageUrl; // Update the image URL in the data
+      }
+
+      // Update the resident document in Firestore, only if there's anything to update
+      if (Object.keys(updatedData).length > 0) {
         await updateDoc(residentRef, updatedData);
+      }
 
-        return res.status(200).json({ message: 'Resident updated successfully' });
-    } catch (error) {
-        console.error('Error updating resident:', error);
-        return res.status(500).json({ message: 'Internal server error' });
-    }
+      return res.status(200).json({ message: 'Resident updated successfully' });
+  } catch (error) {
+      console.error('Error updating resident:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+  }
 };
 
 // Update Resident Voucher Balance
@@ -352,6 +376,8 @@ export const getResidentImage = async (req, res) => {
   }
 };
 
+/* HELPER FUNCTIONS */
+
 // Helper function to get a signed URL
 const getSignedUrl = async (file) => {
   const options = {
@@ -363,4 +389,45 @@ const getSignedUrl = async (file) => {
   // Use the file object to generate the signed URL
   const [url] = await file.getSignedUrl(options);
   return url;
+};
+
+// Helper function to delete an image from Google Cloud Storage
+const deleteImage = async (imageUrl) => {
+    try {
+        const fileName = imageUrl.split('/').pop().split('?')[0]; // Extract file name
+        await bucket.file(`images/${fileName}`).delete();
+        console.log(`Deleted image: ${fileName}`);
+    } catch (error) {
+        console.error('Error deleting previous image:', error);
+    }
+};
+
+// Helper function to upload a new image and return the public URL
+const uploadImage = async (userId, imageFile) => {
+  return new Promise(async (resolve, reject) => {
+      const blob = bucket.file(`images/${userId}`);
+      const blobStream = blob.createWriteStream({
+          metadata: {
+              contentType: imageFile.mimetype,
+          },
+      });
+
+      blobStream.on('error', (err) => {
+          console.error('Error uploading image:', err);
+          reject(err);
+      });
+
+      blobStream.on('finish', async () => {
+          // Generate a signed URL for the uploaded image
+          const signedUrl = await getSignedUrl(blob);
+          resolve(signedUrl);
+      });
+
+      blobStream.end(imageFile.buffer);
+  });
+};
+
+// Check if a string is non-empty, non-whitespace
+const isValidField = (field) => {
+  return typeof field === 'string' && field.trim() !== '';
 };

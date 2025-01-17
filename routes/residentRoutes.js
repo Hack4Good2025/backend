@@ -4,7 +4,7 @@ import {
     createResident,
     getResidentById,
     getAllResidents,
-    updateResident,
+    updateResidentDetails,
     updateResidentVoucherBalance,
     deleteResident,
     requestPasswordReset,
@@ -22,7 +22,7 @@ router.post('/create', upload.single('image'), createResident);
 router.get('/get/all', getAllResidents);
 router.get('/get/id', getResidentById);
 router.get('/get/name', getUserIdFromName);
-router.put('/update/details', updateResident);
+router.put('/update/details', updateResidentDetails);
 router.put('/update/balance', updateResidentVoucherBalance);
 router.delete('/delete', deleteResident);
 router.post('/request-password-reset', requestPasswordReset);

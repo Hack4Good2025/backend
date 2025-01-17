@@ -1,6 +1,6 @@
 import { db } from '../config/firebase.js';
 import ExcelJS from 'exceljs';
-import { collection, doc, setDoc, getDoc, deleteDoc, updateDoc, getDocs, query, Timestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, getDoc, deleteDoc, updateDoc, getDocs, addDoc, orderBy, limit, query, Timestamp } from 'firebase/firestore';
 
 // Create a new product
 export const createProduct = async (req, res) => {
@@ -258,20 +258,27 @@ export const generateReport = async (req, res) => {
       };
     });
 
-    // Store the report in the "reports" collection
+    // Create the report document object
     const reportDoc = {
       createdAt: new Date(),
       reportData: reportData,
     };
 
-    await addDoc(collection(db, 'reports'), reportDoc);
+    // Generate a new document ID and create the document with setDoc
+    const newDocRef = doc(collection(db, 'reports'));
+    await setDoc(newDocRef, { ...reportDoc, reportId: newDocRef.id });
 
-    res.status(201).json({ message: 'Report generated and stored successfully.' });
+    // Return the report in the response
+    res.status(201).json({
+      message: 'Report generated and stored successfully.',
+      report: { reportId: newDocRef.id, ...reportDoc }
+    });
   } catch (err) {
     console.error("Error generating report: ", err);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
 
 // Function to download the latest inventory report
 export const downloadReport = async (req, res) => {
@@ -299,6 +306,32 @@ export const downloadReport = async (req, res) => {
     res.send(xlsBuffer);
   } catch (err) {
     console.error("Error downloading report: ", err);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+export const fetchLatestReport = async (req, res) => {
+  try {
+    // Create a query to fetch the latest report, limited to 1 result and ordered by createdAt
+    const reportsRef = collection(db, 'reports');
+    const latestReportQuery = query(reportsRef, orderBy('createdAt', 'desc'), limit(1));
+    const latestReportSnapshot = await getDocs(latestReportQuery);
+
+    // Check if a report exists
+    if (latestReportSnapshot.empty) {
+      return res.status(404).json({ message: 'No reports found.' });
+    }
+
+    // Map the latest report to include its ID
+    const latestReport = latestReportSnapshot.docs.map(doc => ({
+      reportId: doc.id,
+      ...doc.data(),
+    }))[0]; // Get the first (and only) document
+
+    // Return the latest report in the response
+    res.status(200).json(latestReport);
+  } catch (err) {
+    console.error("Error fetching the latest report: ", err);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 };

@@ -1,14 +1,16 @@
 import { db } from '../config/firebase.js';
 import { collection, doc, setDoc, getDoc, updateDoc, deleteDoc, query, where, getDocs} from 'firebase/firestore';
 import bcrypt from 'bcrypt';
+import { bucket } from '../config/googleCloud.js';
 
 // Create a new resident
 export const createResident = async (req, res) => {
-    try {
-        const { name, password } = req.body;
+  try {
+      const { name, password } = req.body;
+      const imageFile = req.file;
 
-        // Function to generate a memorable userId (6 characters)
-        const generateUserId = () => {
+      // Function to generate a memorable userId (6 characters)
+      const generateUserId = () => {
           const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
           let userId = '';
           for (let i = 0; i < 6; i++) {
@@ -17,32 +19,63 @@ export const createResident = async (req, res) => {
           return userId;
       };
 
-        const residentsRef = collection(db, 'residents');
-        const userId = generateUserId();
+      const residentsRef = collection(db, 'residents');
+      const userId = generateUserId();
 
-        // Hash the password
-        const passwordHash = await bcrypt.hash(password, 10);
+      // Hash the password
+      const passwordHash = await bcrypt.hash(password, 10);
 
-        const newResident = {
-            userId,
-            name,
-            passwordHash,
-            transactionHistory: [],
-            preOrderRequests: [],
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            voucherBalance: 100 // start off with 100
-        };
+      // Create a blob in Google Cloud Storage
+      const blob = bucket.file(`images/${userId}`);
+      const blobStream = blob.createWriteStream({
+          metadata: {
+              contentType: imageFile.mimetype,
+          },
+      });
 
-        // Save to Firestore using userId as the document ID
-        await setDoc(doc(residentsRef, userId), newResident);
+      // Promise to handle the upload and get the public URL
+      const uploadPromise = new Promise((resolve, reject) => {
+          blobStream.on('error', (err) => {
+              console.error('Error uploading image:', err);
+              reject(err);
+          });
 
-        return res.status(201).json({ message: 'Resident created successfully', userId });
-    } catch (error) {
-        console.error('Error creating resident:', error);
-        return res.status(500).json({ message: 'Internal server error' });
-    }
+          blobStream.on('finish', async () => {
+              // Generate a signed URL after the upload is complete
+              const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+              const signedUrl = await getSignedUrl(blob); // Generate signed URL
+              resolve({ publicUrl, signedUrl });
+          });
+
+          // Stream the file to the blob
+          blobStream.end(imageFile.buffer);
+      });
+
+      // Wait for the image upload to complete
+      const { signedUrl } = await uploadPromise; // Get the signed URL
+
+      const newResident = {
+          userId,
+          name,
+          passwordHash,
+          transactionHistory: [],
+          preOrderRequests: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          voucherBalance: 100, // Initial voucher balance
+          image: signedUrl, // Store the signed URL
+      };
+
+      // Save to Firestore using userId as the document ID
+      await setDoc(doc(residentsRef, userId), newResident);
+
+      return res.status(201).json({ message: 'Resident created successfully', resident: newResident });
+  } catch (error) {
+      console.error('Error creating resident:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+  }
 };
+
 
 // Get all residents
 export const getAllResidents = async (req, res) => {
@@ -142,7 +175,6 @@ export const updateResidentVoucherBalance = async (req, res) => {
       return res.status(500).json({ message: 'Internal server error' });
   }
 };
-
 
 // Delete a resident
 export const deleteResident = async (req, res) => {
@@ -293,4 +325,42 @@ export const loginUser = async (req, res) => {
         console.error('Error logging in resident:', error);
         return res.status(500).json({ message: 'Internal server error' });
     }
+};
+
+// Function to retrieve the resident's image
+export const getResidentImage = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+      // Get the file reference for the resident's image
+      const fileName = `images/${userId}`;
+      const file = bucket.file(fileName);
+
+      // Check if the file exists
+      const [exists] = await file.exists();
+      if (!exists) {
+          return res.status(404).json({ message: 'Image not found' });
+      }
+
+      // Generate the signed URL using the helper function
+      const imageUrl = await getSignedUrl(file);
+
+      return res.status(200).json({ imageUrl });
+  } catch (error) {
+      console.error('Error retrieving image:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Helper function to get a signed URL
+const getSignedUrl = async (file) => {
+  const options = {
+      version: 'v4',
+      action: 'read',
+      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+  };
+
+  // Use the file object to generate the signed URL
+  const [url] = await file.getSignedUrl(options);
+  return url;
 };

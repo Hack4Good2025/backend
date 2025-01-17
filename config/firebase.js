@@ -31,4 +31,4 @@ const getFirebaseApp = () => {
   return app;
 };
 
-export { db, getFirebaseApp };
+export { db, getFirebaseApp }; // Export db and storage

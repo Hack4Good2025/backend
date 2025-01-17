@@ -16,6 +16,7 @@ import {
 } from '../controllers/adminTransactionController.js';
 
 const router = express.Router();
+const upload = multer();
 
 // Admin Routes for Product Management
 router.post('/products/create', createProduct);

@@ -1,29 +1,48 @@
 import { db } from '../config/firebase.js';
 import ExcelJS from 'exceljs';
 import { collection, doc, setDoc, getDoc, deleteDoc, updateDoc, getDocs, addDoc, orderBy, limit, query, Timestamp } from 'firebase/firestore';
+import { bucket } from '../config/googleCloud.js';
+import { uploadFileAndGetSignedUrl } from '../utils/imageUtil.js';
+
 
 // Create a new product
 export const createProduct = async (req, res) => {
-    const { name, description, price, stock, imageUrl } = req.body;
+  const { name, description, price, stock } = req.body;
+  const imageFile = req.file;
 
-    try {
-        const productRef = doc(collection(db, 'products'));
-        await setDoc(productRef, {
-            productId: productRef.id,
-            name,
-            description,
-            price,
-            stock,
-            imageUrl,
-            createdAt: Timestamp.now(),
-            updatedAt: Timestamp.now(),
-        });
+  try {
+      const productRef = doc(collection(db, 'products'));
 
-        return res.status(201).json({ message: 'Product created successfully', productId: productRef.id });
-    } catch (error) {
-        console.error('Error creating product: ', error);
-        return res.status(500).json({ message: 'Internal Server Error' });
-    }
+      let imageUrl = null;
+
+      // If an image is provided, upload it and get the URL
+      if (imageFile) {
+          imageUrl = await uploadFileAndGetSignedUrl(imageFile, productRef.id);
+      }
+
+      const productData = {
+          productId: productRef.id,
+          name,
+          description,
+          price,
+          stock,
+          imageUrl,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+      };
+
+      // Save the product document
+      await setDoc(productRef, productData);
+
+      // Return the entire product object in the response
+      return res.status(201).json({
+          message: 'Product created successfully',
+          product: productData,
+      });
+  } catch (error) {
+      console.error('Error creating product: ', error);
+      return res.status(500).json({ message: 'Internal Server Error' });
+  }
 };
 
 // View all products
@@ -428,3 +447,42 @@ async function generateXLS(data) {
   // Generate the XLS file
   return workbook.xlsx.writeBuffer();
 }
+
+/* HELPER FUNCTIONS */
+// TODO: Refactor into Utils Folder
+// Upload image to Google Cloud Storage and return the signed URL
+const uploadImage = async (file, productId) => {
+  return new Promise((resolve, reject) => {
+      const blob = bucket.file(`products/${productId}`);
+      const blobStream = blob.createWriteStream({
+          metadata: {
+              contentType: file.mimetype,
+          },
+      });
+
+      blobStream.on('error', (err) => {
+          console.error('Error uploading image:', err);
+          reject(err);
+      });
+
+      blobStream.on('finish', async () => {
+          const signedUrl = await getSignedUrl(blob);
+          resolve(signedUrl);
+      });
+
+      blobStream.end(file.buffer);
+  });
+};
+
+// Helper function to get a signed URL
+const getSignedUrl = async (file) => {
+  const options = {
+      version: 'v4',
+      action: 'read',
+      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+  };
+
+  // Use the file object to generate the signed URL
+  const [url] = await file.getSignedUrl(options);
+  return url;
+};

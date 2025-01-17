@@ -15,4 +15,4 @@ const bucketName = 'hack4good2025';
 const bucket = storage.bucket(bucketName);
 
 // Export the bucket
-export { bucket };
+export { storage, bucket };
